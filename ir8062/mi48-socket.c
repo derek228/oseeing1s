@@ -15,9 +15,9 @@
 #include "spidev.h"
 #include "ini-parse.h"
 #include "mi48.h"
-
+#include "rs485.h"
 #define NEW_THERMAL_SCAN 1
-#define SERVER_IP "192.168.100.70"  // 替换为接收端的IP地址
+#define SERVER_IP "192.168.100.70"  // Server IP address (fix ip )
 #define SERVER_PORT 8080
 int sockfd=-1;
 struct sockaddr_in server_addr;
@@ -46,7 +46,12 @@ static int fd_capture;
 static uint8_t *tx;
 static uint8_t *rx;
 static int size;
-static uint8_t data[9920]={0};
+static uint8_t mi48_data[9920]={0};
+static unsigned short temp_kelvin[62][80]={0};
+//static uint8_t data[9920]={0};
+
+oseeing_config_t oseeing_config[10] = {0};
+temperature_t temperature[10] = {0};
 
 //static char mi48_header_raw[160]={0};
 static mi48_header_t mi48_header;
@@ -272,7 +277,7 @@ static unsigned char get_server_connect() {
 		return conn;
 	} 
 	else {
-		printf("File %s not exist\n",FILE_SERVER_CONNECTION);
+		//printf("File %s not exist\n",FILE_SERVER_CONNECTION);
 		return 0;
     }
 }
@@ -352,9 +357,119 @@ int is_socket_connection() {
 	return 1;
 }
 
+int oseeing_config_update() {
+	unsigned char data, alarm, temp,i;
+	for (i=0;i<10;i++) {
+		data = get_square_alarm(i);
+		if (data < 0) {
+			printf("Can't get square(%x) data=%x\n", i,data);
+			data = 0;
+		}
+		oseeing_config[i].alarm = ( data & 0x80 ) >> 7;
+		oseeing_config[i].temperature = data & 0x7f ;
+		printf("id(%d) : alarm = %d, temp = %d\n", i, oseeing_config[i].alarm,oseeing_config[i].temperature);
+	}
+	return 0;
+}
+
+int send_alarm_status(unsigned char cmd) {
+	int i,j,len=0;
+	unsigned char buf[20];
+	printf("%s\n",__FUNCTION__);	
+	for (i=0;i<10;i++) {
+		if (oseeing_config[i].alarm) {
+			if (oseeing_config[i].temperature < temperature[i].max) {
+				buf[len] = i;
+				buf[len+1] = temperature[i].max;
+				len += 2;
+				printf("len = %d ,ID(%d) temperature(%d) > alarm temperature(%d)\n", len, i, temperature[i].max, oseeing_config[i].temperature);
+			}
+			else 
+				printf("ID(%d) temperature(%d) < alarm temperature(%d)\n", i, temperature[i].max, oseeing_config[i].temperature);
+		}
+		else {
+			printf("ID(%d) alarm disable...\n",i);
+		}
+	}
+	if (len ==0 ) {
+		printf("No temperature alarm...\n");
+		buf[0]=0;
+	}
+	send_sensor_info(buf,len,cmd);
+}
+// reverse
+int send_frame_status(unsigned char cmd) {
+	printf("%s\n",__FUNCTION__);
+
+}
+int send_square_status(unsigned char cmd) {
+	unsigned char buf[20]={0};
+	int i;
+	for (i=0; i<10; i++) {
+		buf[i*2]=temperature[i].max;
+		buf[i*2+1]=temperature[i].min;
+	}
+	send_sensor_info(buf, 20, cmd);
+	printf("%s\n",__FUNCTION__);
+	
+}
+
+void mi48_raw_to_kelvin() {
+	int i,j;
+    for (i = 0; i < 62; i++) {
+        for (j = 0; j < 80; j++) {
+            temp_kelvin[i][j] = (mi48_data[(i * 80 + j) * 2] << 8) | mi48_data[(i * 80 + j) * 2 + 1];
+        }
+    }
+	printf("temperature[30][30]= %d\n",temp_kelvin[30][30]);
+}
+
+int temperature_analysis(unsigned char cmd) {
+	int i,j,k;
+	unsigned short int max, min;
+	oseeing_config_update();
+	mi48_raw_to_kelvin();
+	temperature[0].max = (mi48_header.max-2735) / 10;
+	temperature[0].min = (mi48_header.min-2735) / 10;
+	printf("Frame max temperature = %d, min temperature = %d\n", temperature[0].max,temperature[0].min);
+	for (i=1; i<10; i++) {
+		min=0xFFFF;
+		max=0;
+		for (j=area[i-1].y1; j<area[i-1].y2; j++) {
+			for (k=area[i-1].x1; k<area[i-1].x2; k++) {
+				if (temp_kelvin[j][k] > max)
+					max = (temp_kelvin[j][k]);
+					//max = (temp_kelvin[j][k]-2735)/10;
+				if (temp_kelvin[j][k] < min)
+					min = (temp_kelvin[j][k]);
+					//min = (temp_kelvin[j][k]-2735)/10;
+			}
+			temperature[i].max = (max-2735)/10;
+			temperature[i].min = (min-2735)/10;
+		}
+		printf("area[%d] x1(%d),y1(%d),x2(%d),y2(%d) : max=%d, min=%d\n", i, area[i-1].x1,area[i-1].y1,area[i-1].x2,area[i-1].y2,temperature[i].max,temperature[i].min);
+	}
+	switch (cmd) {
+		case RS485_GET_ALARM_STATUS :
+			send_alarm_status(cmd);
+			break ; 
+		case RS485_GET_SQUARE_STAUTS:
+			send_square_status(cmd);
+			break;
+		case RS485_GET_FRAME_STATUS:
+			send_frame_status(cmd);
+			break;
+		default : 
+			printf("Unknow server request (0x%x)\n", cmd);
+			return -1;
+	}
+
+}
+
 //int mi48_scan(char *data) {
 int mi48_scan() {
 	int spi_count = 0;
+	unsigned char cmd;
 	mi48_log_print();
 	size = 160;
 	if (state_change == 1) 
@@ -365,23 +480,27 @@ int mi48_scan() {
 		mi48_header_parse(rx);
 		for (spi_count = 0; spi_count<62;spi_count++) {
 			transfer(fd_spi,tx,rx,size);
-			memcpy(&data[spi_count*160],rx,size);
+			memcpy(&mi48_data[spi_count*160],rx,size);
 		}
-// Try to send data to socket
+// Try to send mi48_data to socket
 		if (is_socket_connection() > 0) {
-			ssize_t sent_bytes = send(sockfd, data, sizeof(data), MSG_NOSIGNAL);
+			ssize_t sent_bytes = send(sockfd, mi48_data, sizeof(mi48_data), MSG_NOSIGNAL);
 //			printf("sent_bytes = %d\n", sent_bytes);
 			if (sent_bytes < 0) {
-				perror("Failed to send data");
+				perror("Failed to send mi48_data");
 				socket_connected = -1;
 				close(sockfd);
 				sockfd = -1;
 			}
 		}
-		return 1; // success
+		// socket end
+// Check modbus server request 
+		cmd = get_server_command();
+		if (cmd)
+			temperature_analysis(cmd);
 	}
-	else 
-		return 0; // fail, spi not ready
+
+	return 0; // fail, spi not ready
 }
 unsigned int mi48_get_max_temperature() {
 	return mi48_header.max;
@@ -392,7 +511,7 @@ unsigned int mi48_get_min_temperature() {
 }
 
 uint8_t *mi48_get_data() {
-	return data;
+	return mi48_data;
 }
 int mi48_close()
 {
@@ -405,12 +524,13 @@ int mi48_close()
 int socket_close() {
 
 }
+
 int mi48_init()
 {
 	int ret=0;
 	ret=ir8062_hwinit();
+	oseeing_config_update();
 	if (ret < 0) 
 		printf("ERROR : MI48 initial failure\n");
 	return ret;
 }
-
