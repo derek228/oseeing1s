@@ -3,6 +3,7 @@ import time
 
 RS485_SET_DEVICE_ID	=	0x80
 RS485_SET_DEVICE_MODE=	0x81
+RS485_SET_FRAME     =   0x70
 RS485_SET_SQUARE1	=	0x71
 RS485_SET_SQUARE2	=	0x72
 RS485_SET_SQUARE3	=	0x73
@@ -12,14 +13,16 @@ RS485_SET_SQUARE6	=	0x76
 RS485_SET_SQUARE7	=	0x77
 RS485_SET_SQUARE8	=	0x78
 RS485_SET_SQUARE9	=	0x79
-RS485_GET_FRAME_STATUS=	0x60
-RS485_GET_SQUARE_STAUTS=	0x70
+RS485_GET_ALARM_STATUS = 0x82 # return id , alarm, max length 20 bytes
+RS485_GET_FRAME_STATUS=	0x84 # return max, min
+RS485_GET_SQUARE_STAUTS=	0x83 # return max, min
 BAUDRATE=115200
 RESET_DEVICE_ID={0xAA,0xFF,0x5A,0xA5,0x03,0x24}
 class SerialConfig:
 
     def __init__(self):
         self.com_port=None
+        self.connected=0
         self.mode='frame'
         self.id=0xAA
         self.frame_alarm=0
@@ -102,18 +105,20 @@ class SerialConfig:
         return self.send_and_receive_data(data_packet) 
     
     def set_square(self, index, data) :
-        command_id = RS485_GET_SQUARE_STAUTS+index
+        command_id = RS485_SET_FRAME+index
         data_packet = bytearray([int(self.id,16), command_id, 1, data])
         return self.send_and_receive_data(data_packet)   
     #set frame
     def set_device_mode(self) :
         if self.frame_alarm == '1':
-            data_packet = bytearray([int(self.id,16), RS485_SET_DEVICE_MODE, 1, int(self.frame_alarm_temperature)])
+            #data_packet = bytearray([int(self.id,16), RS485_SET_DEVICE_MODE, 1, int(self.frame_alarm_temperature)])
+            data_packet = bytearray([int(self.id,16), RS485_SET_DEVICE_MODE, 1, 1])
         else :
             data_packet = bytearray([int(self.id,16), RS485_SET_DEVICE_MODE, 1, 0])
         return self.send_and_receive_data(data_packet)   
 
-    def set_device_id(self, command_id, id) :
+    def set_device_id(self, id) :
+        #data_packet = bytearray([self.id, RS485_SET_DEVICE_ID, 1, id])
         data_packet = bytearray([int(self.id,16), RS485_SET_DEVICE_ID, 1, id])
         return self.send_and_receive_data(data_packet)   
 

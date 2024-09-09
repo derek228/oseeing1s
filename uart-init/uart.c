@@ -377,6 +377,8 @@ static int write_device_id(unsigned char id) {
 		return -1;
 	}
 	fclose(file);
+	printf("Current ID (%d) change to New ID (%d)\n", rs485_id, id);
+	rs485_id = id;
 	return 0;
 }
 
@@ -502,6 +504,11 @@ static int rx_data_parse(char *rx, ssize_t len) {
 	}
 	switch (cmd) {
 		case RS485_SET_DEVICE_ID:
+			if (rs485_id == rx[3]) {
+				printf("New ID (%d) == Device ID (%d) \n", rx[3], rs485_id);
+				echo_rx_data(rx,len);
+				return 1;
+			}
 			if (write_device_id(rx[3])==0) {
 				echo_rx_data(rx,len);
 				rs485_id = rx[3];

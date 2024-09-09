@@ -4,7 +4,7 @@ import configparser
 import config_data
 import serial.tools.list_ports
 from tkinter import messagebox
-
+import time
 #def apply_settings():
 
 def connect_device():
@@ -25,6 +25,8 @@ def parse_default_ini () :
             for option in options:
                 value = ini_config.get(section, option)
                 if option == 'id' :
+                    #id = int(value,16)
+                    #oseeing.set_id(id)
                     oseeing.set_id(value)
                 elif option == 'frame_alarm' :
                     oseeing.set_frame_alarm(value)
@@ -71,12 +73,30 @@ def parse_default_ini () :
                 print(f'{option} = {value}')    
 
 def download_settings() :
+    if oseeing.com_port == None :
+        messagebox.showerror("錯誤", "未指定COM Port")
+        return
+ 
     #write frame
-    if oseeing.set_device_mode() == False :
+
+    ''' if oseeing.set_device_mode() == False :
         messagebox.showerror("錯誤", "Frame 設置異常")
         return
     else :
         print("Set Frame successful...")
+        time.sleep(0.01) '''
+    if oseeing.frame_alarm == '1':
+        sqdata = 0x80 + int(oseeing.frame_alarm_temperature)
+        if oseeing.set_square(0,sqdata) == False :
+            messagebox.showerror("錯誤", f"Frame 設置異常")
+            return
+    else :
+        if oseeing.set_square(0,0) == False :
+            messagebox.showerror("錯誤", f"Frame 設置異常")
+            return
+    print(f"Set Frame ({sqdata}) successful...")
+    time.sleep(0.01)
+    
     #square 1
     if oseeing.square1_alarm == '1':
         sqdata = 0x80 + int(oseeing.square1_alarm_temperature)
@@ -88,6 +108,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 1 設置異常")
             return
     print(f"Set Square 1 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 2
     if oseeing.square2_alarm == '1':
@@ -100,6 +121,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 2 設置異常")
             return
     print(f"Set Square 2 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 3
     if oseeing.square3_alarm == '1':
@@ -112,6 +134,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 3 設置異常")
             return
     print(f"Set Square 3 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 4
     if oseeing.square4_alarm == '1':
@@ -124,6 +147,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 4 設置異常")
             return
     print(f"Set Square 4 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 5
     if oseeing.square5_alarm == '1':
@@ -136,6 +160,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 5 設置異常")
             return
     print(f"Set Square 5 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 6
     if oseeing.square6_alarm == '1':
@@ -148,6 +173,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 6 設置異常")
             return
     print(f"Set Square 6 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 7
     if oseeing.square7_alarm == '1':
@@ -160,6 +186,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 7 設置異常")
             return
     print(f"Set Square 7 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 8
     if oseeing.square8_alarm == '1':
@@ -172,6 +199,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 8 設置異常")
             return
     print(f"Set Square 8 ({sqdata}) successful...")
+    time.sleep(0.01)
 
     #square 9
     if oseeing.square9_alarm == '1':
@@ -184,6 +212,7 @@ def download_settings() :
             messagebox.showerror("錯誤", f"Square 9 設置異常")
             return
     print(f"Set Square 9 ({sqdata}) successful...")
+    time.sleep(0.01)
 
 def save_settings():
     print("save settings")
@@ -233,14 +262,38 @@ def btn_reset_id():
     else :
         messagebox.showerror("錯誤", "連接異常")
 
+def btn_write_id():
+    hex_value = write_id_entry.get().strip()
+    id = int(hex_value, 16)
+    #if len(hex_value) != 2 or not (0x00 <= int(hex_value, 16) <= 0xFF):
+    if not (0x00 <= int(hex_value, 16) <= 0xFF):
+        messagebox.showerror("錯誤", "請輸入有效的 1-byte 十六進制數（00 - FF）")
+        return
+    if oseeing.com_port == None :
+        messagebox.showerror("錯誤", "未指定COM Port")
+        return
+    if oseeing.set_device_id(id) :
+        messagebox.showerror("確認", f"ID({hex(id)})修改完成")
+        oseeing.set_id(hex_value)
+        id_entry.delete(0, tk.END)  
+        id_entry.insert(0,hex(int(oseeing.id,16))) 
+
+    else :
+        messagebox.showerror("錯誤", "連接異常")
+
 def btn_set_id():
     hex_value = id_entry.get().strip()
     id = int(hex_value, 16)
-    if len(hex_value) != 2 or not (0x00 <= int(hex_value, 16) <= 0xFF):
+    #if len(hex_value) != 2 or not (0x00 <= int(hex_value, 16) <= 0xFF):
+    if not (0x00 <= int(hex_value, 16) <= 0xFF):
         messagebox.showerror("錯誤", "請輸入有效的 1-byte 十六進制數（00 - FF）")
         return
-    if oseeing.set_device_id(0x80,id) :
-        messagebox.showerror("確認", f"Oseeing 裝置以連接, ID({hex(id)})")
+    if oseeing.com_port == None :
+        messagebox.showerror("錯誤", "未指定COM Port")
+        return
+    oseeing.set_id(hex_value)
+    if oseeing.set_device_id(id) :
+        messagebox.showerror("確認", f"Oseeing 裝置已連接, ID({hex(id)})")
     else :
         messagebox.showerror("錯誤", "連接異常")
 
@@ -374,12 +427,11 @@ com_port_label.grid(row=0,column=0,sticky=tk.W)
 rs485_id_label = tk.Label(root, text="Modbus Device ID:")
 rs485_id_label.grid(row=1,column=0,padx=5, pady=5)
 id_entry = tk.Entry(root, width=5)
-id_entry.insert(0,(oseeing.id))
+#id_entry.insert(0,hex(oseeing.id).upper()) 
+id_entry.insert(0,hex(int(oseeing.id,16))) 
 id_entry.grid(row=1, column=1, padx=5)
-button_id = tk.Button(root, text="確認", command=btn_set_id)
-button_id.grid(row=1, column=3, padx=5)
-button_id = tk.Button(root, text="重置ID", command=btn_reset_id)
-button_id.grid(row=1, column=4, padx=5)
+button_id = tk.Button(root, text="連線", command=btn_set_id)
+button_id.grid(row=1, column=2, padx=5)
 
 # Set Frame Alarm params
 frame_alarm_var=tk.StringVar(value=oseeing.frame_alarm)
@@ -514,8 +566,19 @@ button_square9.grid(row=11, column=3, padx=5)
 save_button = tk.Button(root, text="儲存設定", command=save_settings)
 save_button.grid(row=12,column=0)
 
-save_button = tk.Button(root, text="寫入裝置", command=download_settings)
-save_button.grid(row=12,column=1)
+write_button = tk.Button(root, text="寫入裝置", command=download_settings)
+write_button.grid(row=12,column=1)
+
+
+write_id_label = tk.Label(root, text="New Device ID:")
+write_id_label.grid(row=13,column=0,padx=5, pady=5)
+write_id_entry = tk.Entry(root, width=5)
+#id_entry.insert(0,(oseeing.id))
+write_id_entry.grid(row=13, column=1, padx=5)
+button_write_id = tk.Button(root, text="確認", command=btn_write_id)
+button_write_id.grid(row=13, column=2, padx=5)
+button_reset_id = tk.Button(root, text="重置ID", command=btn_reset_id)
+button_reset_id.grid(row=13, column=3, padx=5)
 
 # 啟動主迴圈
 root.mainloop()
