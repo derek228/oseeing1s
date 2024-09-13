@@ -10,6 +10,107 @@ import time
 def connect_device():
     print("connect_device")
 
+def update_config() :
+# Square 1
+    oseeing.set_square_alarm(square1_alarm_var.get(),1)
+    print(f"Square1 alarm ={oseeing.square1_alarm}")
+    hex_value = square1_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(1)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 1)
+        print(f"Square1 alarm temperature={oseeing.square1_alarm_temperature}")
+
+# Square 2
+    oseeing.set_square_alarm(square1_alarm_var.get(),2)
+    print(f"Square2 alarm ={oseeing.square1_alarm}")
+    hex_value = square2_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(2)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 2)
+        print(f"Square2 alarm temperature={oseeing.square2_alarm_temperature}")
+
+# Square 3
+    oseeing.set_square_alarm(square3_alarm_var.get(),3)
+    print(f"Square3 alarm ={oseeing.square3_alarm}")
+    hex_value = square3_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(3)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 3)
+        print(f"Square3 alarm temperature={oseeing.square3_alarm_temperature}")
+
+# Square 4
+    oseeing.set_square_alarm(square4_alarm_var.get(),4)
+    print(f"Square4 alarm ={oseeing.square4_alarm}")
+    hex_value = square4_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(4)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 4)
+        print(f"Square4 alarm temperature={oseeing.square1_alarm_temperature}")
+
+# Square 5
+    oseeing.set_square_alarm(square5_alarm_var.get(),5)
+    print(f"Square5 alarm ={oseeing.square5_alarm}")
+    hex_value = square5_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(5)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 5)
+        print(f"Square5 alarm temperature={oseeing.square5_alarm_temperature}")
+
+# Square 6
+    oseeing.set_square_alarm(square6_alarm_var.get(),6)
+    print(f"Square6 alarm ={oseeing.square6_alarm}")
+    hex_value = square6_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(6)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 6)
+        print(f"Square6 alarm temperature={oseeing.square6_alarm_temperature}")
+
+# Square 7
+    oseeing.set_square_alarm(square7_alarm_var.get(),7)
+    print(f"Square7 alarm ={oseeing.square7_alarm}")
+    hex_value = square7_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(7)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 7)
+        print(f"Square7 alarm temperature={oseeing.square7_alarm_temperature}")
+
+# Square 8
+    oseeing.set_square_alarm(square8_alarm_var.get(),8)
+    print(f"Square8 alarm ={oseeing.square8_alarm}")
+    hex_value = square8_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(8)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 8)
+        print(f"Square8 alarm temperature={oseeing.square8_alarm_temperature}")
+
+# Square 9
+    oseeing.set_square_alarm(square1_alarm_var.get(),9)
+    print(f"Square9 alarm ={oseeing.square1_alarm}")
+    hex_value = square9_alarm_entry.get().strip()
+    if int(hex_value) >127 :
+        messagebox.showerror("錯誤", "超出範圍(9)，請輸入0~127")
+    else :
+        oseeing.set_square_alarm_temperature(hex_value, 9)
+        print(f"Square9 alarm temperature={oseeing.square9_alarm_temperature}")
+
+# Frame
+    oseeing.set_frame_alarm(frame_alarm_var.get())
+    print(f"Frame alarm value : {(frame_alarm_var.get())}")
+    hex_value = frame_alarm_entry.get().strip()
+    if int(hex_value)>127:
+        messagebox.showinfo("錯誤", f"輸入的溫度大於於127: {hex_value}")
+    else :
+        oseeing.set_frame_alarm_temperature(hex_value)
+        print(f"Seg Frame alarm temperature = {hex_value}")
+    
 def parse_default_ini () :
     ini_config = configparser.ConfigParser()
     try :
@@ -78,7 +179,7 @@ def download_settings() :
         return
  
     #write frame
-
+    update_config()
     ''' if oseeing.set_device_mode() == False :
         messagebox.showerror("錯誤", "Frame 設置異常")
         return
@@ -216,6 +317,7 @@ def download_settings() :
 
 def save_settings():
     print("save settings")
+    update_config()
     config = configparser.RawConfigParser()
     with open('oseeing1s.ini', 'w') as file:
         file.write("\n")
@@ -441,10 +543,10 @@ frame_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 frame_alarm_entry = tk.Entry(root, width=5)
 frame_alarm_entry.insert(0,oseeing.frame_alarm_temperature)
 frame_alarm_entry.grid(row=2, column=1, padx=5)
-temp_frame = tk.Label(root, text="°F")
+temp_frame = tk.Label(root, text="°C")
 temp_frame.grid(row=2, column=2, padx=0)
-button_frame_alarm = tk.Button(root, text="確認", command=btn_set_frame_alarm_temperature)
-button_frame_alarm.grid(row=2, column=3, padx=5)
+#button_frame_alarm = tk.Button(root, text="確認", command=btn_set_frame_alarm_temperature)
+#button_frame_alarm.grid(row=2, column=3, padx=5)
 
 # Set Square1 Alarm params
 square1_alarm_var=tk.StringVar(value=oseeing.square1_alarm)
@@ -454,10 +556,10 @@ square1_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square1_alarm_entry = tk.Entry(root, width=5)
 square1_alarm_entry.insert(0,oseeing.square1_alarm_temperature)
 square1_alarm_entry.grid(row=3, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=3, column=2, padx=0)
-button_square1 = tk.Button(root, text="確認", command=btn_set_square1_alarm_temperature)
-button_square1.grid(row=3, column=3, padx=5)
+#button_square1 = tk.Button(root, text="確認", command=btn_set_square1_alarm_temperature)
+#button_square1.grid(row=3, column=3, padx=5)
 
 # Set Square2 Alarm params
 square2_alarm_var=tk.StringVar(value=oseeing.square2_alarm)
@@ -467,10 +569,10 @@ square2_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square2_alarm_entry = tk.Entry(root, width=5)
 square2_alarm_entry.insert(0,oseeing.square2_alarm_temperature)
 square2_alarm_entry.grid(row=4, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=4, column=2, padx=0)
-button_square2 = tk.Button(root, text="確認", command=btn_set_square2_alarm_temperature)
-button_square2.grid(row=4, column=3, padx=5)
+#button_square2 = tk.Button(root, text="確認", command=btn_set_square2_alarm_temperature)
+#button_square2.grid(row=4, column=3, padx=5)
 
 # Set Square3 Alarm params
 square3_alarm_var=tk.StringVar(value=oseeing.square3_alarm)
@@ -480,10 +582,10 @@ square3_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square3_alarm_entry = tk.Entry(root, width=5)
 square3_alarm_entry.insert(0,oseeing.square3_alarm_temperature)
 square3_alarm_entry.grid(row=5, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=5, column=2, padx=0)
-button_square3 = tk.Button(root, text="確認", command=btn_set_square3_alarm_temperature)
-button_square3.grid(row=5, column=3, padx=5)
+#button_square3 = tk.Button(root, text="確認", command=btn_set_square3_alarm_temperature)
+#button_square3.grid(row=5, column=3, padx=5)
 
 # Set Square4 Alarm params
 square4_alarm_var=tk.StringVar(value=oseeing.square4_alarm)
@@ -493,10 +595,10 @@ square4_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square4_alarm_entry = tk.Entry(root, width=5)
 square4_alarm_entry.insert(0,oseeing.square4_alarm_temperature)
 square4_alarm_entry.grid(row=6, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=6, column=2, padx=0)
-button_square4 = tk.Button(root, text="確認", command=btn_set_square4_alarm_temperature)
-button_square4.grid(row=6, column=3, padx=5)
+#button_square4 = tk.Button(root, text="確認", command=btn_set_square4_alarm_temperature)
+#button_square4.grid(row=6, column=3, padx=5)
 
 # Set Square5 Alarm params
 square5_alarm_var=tk.StringVar(value=oseeing.square5_alarm)
@@ -506,10 +608,10 @@ square5_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square5_alarm_entry = tk.Entry(root, width=5)
 square5_alarm_entry.insert(0,oseeing.square5_alarm_temperature)
 square5_alarm_entry.grid(row=7, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=7, column=2, padx=0)
-button_square5 = tk.Button(root, text="確認", command=btn_set_square5_alarm_temperature)
-button_square5.grid(row=7, column=3, padx=5)
+#button_square5 = tk.Button(root, text="確認", command=btn_set_square5_alarm_temperature)
+#button_square5.grid(row=7, column=3, padx=5)
 
 # Set Square6 Alarm params
 square6_alarm_var=tk.StringVar(value=oseeing.square6_alarm)
@@ -519,10 +621,10 @@ square6_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square6_alarm_entry = tk.Entry(root, width=5)
 square6_alarm_entry.insert(0,oseeing.square6_alarm_temperature)
 square6_alarm_entry.grid(row=8, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=8, column=2, padx=0)
-button_square6 = tk.Button(root, text="確認", command=btn_set_square6_alarm_temperature)
-button_square6.grid(row=8, column=3, padx=5)
+#button_square6 = tk.Button(root, text="確認", command=btn_set_square6_alarm_temperature)
+#button_square6.grid(row=8, column=3, padx=5)
 
 # Set Square7 Alarm params
 square7_alarm_var=tk.StringVar(value=oseeing.square7_alarm)
@@ -532,10 +634,10 @@ square7_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square7_alarm_entry = tk.Entry(root, width=5)
 square7_alarm_entry.insert(0,oseeing.square7_alarm_temperature)
 square7_alarm_entry.grid(row=9, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=9, column=2, padx=0)
-button_square7 = tk.Button(root, text="確認", command=btn_set_square7_alarm_temperature)
-button_square7.grid(row=9, column=3, padx=5)
+#button_square7 = tk.Button(root, text="確認", command=btn_set_square7_alarm_temperature)
+#button_square7.grid(row=9, column=3, padx=5)
 
 # Set Square8 Alarm params
 square8_alarm_var=tk.StringVar(value=oseeing.square8_alarm)
@@ -545,10 +647,10 @@ square8_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square8_alarm_entry = tk.Entry(root, width=5)
 square8_alarm_entry.insert(0,oseeing.square8_alarm_temperature)
 square8_alarm_entry.grid(row=10, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=10, column=2, padx=0)
-button_square8 = tk.Button(root, text="確認", command=btn_set_square8_alarm_temperature)
-button_square8.grid(row=10, column=3, padx=5)
+#button_square8 = tk.Button(root, text="確認", command=btn_set_square8_alarm_temperature)
+#button_square8.grid(row=10, column=3, padx=5)
 
 # Set Square9 Alarm params
 square9_alarm_var=tk.StringVar(value=oseeing.square9_alarm)
@@ -558,10 +660,10 @@ square9_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:")
 square9_alarm_entry = tk.Entry(root, width=5)
 square9_alarm_entry.insert(0,oseeing.square9_alarm_temperature)
 square9_alarm_entry.grid(row=11, column=1, padx=5)
-temp_unit_label = tk.Label(root, text="°F")
+temp_unit_label = tk.Label(root, text="°C")
 temp_unit_label.grid(row=11, column=2, padx=0)
-button_square9 = tk.Button(root, text="確認", command=btn_set_square9_alarm_temperature)
-button_square9.grid(row=11, column=3, padx=5)
+#button_square9 = tk.Button(root, text="確認", command=btn_set_square9_alarm_temperature)
+#button_square9.grid(row=11, column=3, padx=5)
 
 save_button = tk.Button(root, text="儲存設定", command=save_settings)
 save_button.grid(row=12,column=0)
