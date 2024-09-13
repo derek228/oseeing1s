@@ -52,6 +52,16 @@ static unsigned short temp_kelvin[62][80]={0};
 
 oseeing_config_t oseeing_config[10] = {0};
 temperature_t temperature[10] = {0};
+coordinate_t area[9]= { { 1, 1,26,20},
+						{27, 1,52,20},
+						{53, 1,78,20},
+						{ 1,21,26,40},
+						{27,21,52,40},
+						{53,21,78,40},
+						{ 1,41,26,60},
+						{27,41,52,60},
+						{53,41,78,60}
+};
 
 //static char mi48_header_raw[160]={0};
 static mi48_header_t mi48_header;

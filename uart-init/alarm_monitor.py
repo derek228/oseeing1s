@@ -15,7 +15,7 @@ def connect_serial(port):
     global ser
     if ser:
         ser.close()
-    ser = serial.Serial(port, 115200, timeout=1)
+    ser = serial.Serial(port, 9600, timeout=1)
     ser.flushInput()
     ser.flushOutput() 
     ser.write(b'\xAA\x82\x01\x2D')  # 發送初始數據

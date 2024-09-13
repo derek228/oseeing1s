@@ -16,7 +16,7 @@ RS485_SET_SQUARE9	=	0x79
 RS485_GET_ALARM_STATUS = 0x82 # return id , alarm, max length 20 bytes
 RS485_GET_FRAME_STATUS=	0x84 # return max, min
 RS485_GET_SQUARE_STAUTS=	0x83 # return max, min
-BAUDRATE=115200
+BAUDRATE=9600 #115200
 RESET_DEVICE_ID={0xAA,0xFF,0x5A,0xA5,0x03,0x24}
 class SerialConfig:
 
@@ -123,8 +123,8 @@ class SerialConfig:
         return self.send_and_receive_data(data_packet)   
 
     def send_and_receive_data(self, data_packet):
-        retry=3
-        print(self.com_port)
+        retry=30
+        print(f"{self.com_port} Baudrate={BAUDRATE}")
         with serial.Serial(self.com_port, BAUDRATE, timeout=1) as ser:
             ser.flushInput() 
             ser.flushOutput()

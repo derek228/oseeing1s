@@ -23,9 +23,8 @@
 #include <linux/serial.h>
 #include "ini-parse.h"
 #include "rs485.h"
-
-#define RS485_DEV "/dev/ttyS8" // rs485 port
-#define RS485_BAUDRATE	B9600
+#define RS485_DEV "/dev/ttyS4" // uart port
+#define RS232_BAUDRATE 115200
 // File name
 // save the device id to replace default id
 #define FILE_RS485_CUSTOM_ID	"/mnt/mtdblock1/oseeing1s-config/id" 
@@ -60,166 +59,63 @@ int serial_port;
 static unsigned char rs485_id = 0xAA;
 static char buffer[BUFFER_SIZE];
 static char rx[BUFFER_SIZE];
-
-/* Driver-specific ioctls: ...\linux-3.10.x\include\uapi\asm-generic\ioctls.h */
-#define TIOCGRS485      0x542E
-#define TIOCSRS485      0x542F
-
-struct my_serial_rs485
+static int serial_init()
 {
-	unsigned long	flags;			/* RS485 feature flags */
-#define SER_RS485_ENABLED		(1 << 0)	/* If enabled */
-#define SER_RS485_RTS_ON_SEND		(1 << 1)	/* Logical level for
-							   RTS pin when
-							   sending */
-#define SER_RS485_RTS_AFTER_SEND	(1 << 2)	/* Logical level for
-							   RTS pin after sent*/
-#define SER_RS485_RX_DURING_TX		(1 << 4)
-	unsigned long	delay_rts_before_send;	/* Delay before send (milliseconds) */
-	unsigned long	delay_rts_after_send;	/* Delay after send (milliseconds) */
-	unsigned long	padding[5];		/* Memory is cheap, new structs
-					   are a royal PITA .. */
-};
-
-static struct termios newtios,oldtios; /*termianal settings */
-static int saved_portfd=-1;            /*serial port fd */
-
-
-
-static void reset_tty_atexit(void)
-{
-	if(saved_portfd != -1)
-	{
-		tcsetattr(saved_portfd,TCSANOW,&oldtios);
-	} 
-}
-
-/*cheanup signal handler */
-static void reset_tty_handler(int signal)
-{
-	if(saved_portfd != -1)
-	{
-		tcsetattr(saved_portfd,TCSANOW,&oldtios);
-	}
-	_exit(EXIT_FAILURE);
-}
-
-static int open_port(const char *portname)
-{
-	struct sigaction sa;
-	int portfd;
-#if (__GNUC__ == 4 && __GNUC_MINOR__ == 3)
-	struct my_serial_rs485 rs485conf;
-	struct my_serial_rs485 rs485conf_bak;
-#else
-	struct serial_rs485 rs485conf;
-	struct serial_rs485 rs485conf_bak;
-#endif	
-	//printf("opening serial port:%s\n",portname);
-	/*open serial port */
-	//if ((portfd=open(portname, O_RDWR | O_NOCTTY | O_NONBLOCK)) < 0) // 以读写方式打开串口设备
-	if((portfd=open(portname,O_RDWR | O_NOCTTY, 0)) < 0 )
-	{
-   		printf("open serial port %s fail \n ",portname);
-   		return portfd;
-	}
-
-	printf("opening serial port:%s\n",portname);
-
-	/*get serial port parnms,save away */
-	tcgetattr(portfd,&newtios);
-	memcpy(&oldtios,&newtios,sizeof newtios);
-	/* configure new values */
-	cfmakeraw(&newtios); /*see man page */
-	newtios.c_iflag |=IGNPAR; /*ignore parity on input */
-	newtios.c_oflag &= ~(OPOST | ONLCR | OLCUC | OCRNL | ONOCR | ONLRET | OFILL); 
-	newtios.c_cflag = CS8 | CLOCAL | CREAD;
-	//newtios.c_cc[VMIN]=1; /* block until 1 char received */
-	newtios.c_cc[VMIN]=0; /* block until 1 char received */
-	newtios.c_cc[VTIME]=0; /*no inter-character timer */
-	/* 115200 bps */
-	cfsetospeed(&newtios,RS485_BAUDRATE);
-	cfsetispeed(&newtios,RS485_BAUDRATE);
-	/* register cleanup stuff */
-	atexit(reset_tty_atexit);
-	memset(&sa,0,sizeof sa);
-	sa.sa_handler = reset_tty_handler;
-	sigaction(SIGHUP,&sa,NULL);
-	sigaction(SIGINT,&sa,NULL);
-	sigaction(SIGPIPE,&sa,NULL);
-	sigaction(SIGTERM,&sa,NULL);
-	/*apply modified termios */
-	saved_portfd=portfd;
-	tcflush(portfd,TCIFLUSH);
-	tcsetattr(portfd,TCSADRAIN,&newtios);
-	
-		
-	if (ioctl (portfd, TIOCGRS485, &rs485conf) < 0) 
-	{
-		/* Error handling.*/ 
-		printf("ioctl TIOCGRS485 error.\n");
-	}
-	/* Enable RS485 mode: */
-	rs485conf.flags |= SER_RS485_ENABLED;
-
-	/* Set logical level for RTS pin equal to 1 when sending: */
-	rs485conf.flags |= SER_RS485_RTS_ON_SEND;
-	//rs485conf.flags |= SER_RS485_RTS_AFTER_SEND;
-
-	/* set logical level for RTS pin equal to 0 after sending: */ 
-	rs485conf.flags &= ~(SER_RS485_RTS_AFTER_SEND);
-	//rs485conf.flags &= ~(SER_RS485_RTS_ON_SEND);
-
-	/* Set rts delay after send, if needed: */
-	rs485conf.delay_rts_after_send = 0x80;
-
-	if (ioctl (portfd, TIOCSRS485, &rs485conf) < 0)
-	{
-		/* Error handling.*/ 
-		printf("ioctl TIOCSRS485 error.\n");
-	}
-
-	if (ioctl (portfd, TIOCGRS485, &rs485conf_bak) < 0)
-	{
-		/* Error handling.*/ 
-		printf("ioctl TIOCGRS485 error.\n");
-	}
-	else
-	{
-		printf("rs485conf_bak.flags 0x%x.\n", rs485conf_bak.flags);
-		printf("rs485conf_bak.delay_rts_before_send 0x%x.\n", rs485conf_bak.delay_rts_before_send);
-		printf("rs485conf_bak.delay_rts_after_send 0x%x.\n", rs485conf_bak.delay_rts_after_send);
-	}
-
-	return portfd;
-}
-
-
-static void sendcmd(char *tx, size_t size) {
-	write(serial_port, tx, size);
-}
-
-static ssize_t readdev(char *rx) {
-	ssize_t rx_size=0;
-	memset(rx,0,BUFFER_SIZE);
-	rx_size = read(serial_port, rx, BUFFER_SIZE);
-	return rx_size; // read(serial_port,rx,size); // return read length
-}
-
-int serial_init() {
-	serial_port = open_port(RS485_DEV);
+	struct termios tty;
+	serial_port = open(RS485_DEV, O_RDWR | O_NOCTTY | O_NONBLOCK); // 以读写方式打开串口设备
 	if (serial_port < 0) {
-		printf("Can't open RS485 dev of %s\n", RS485_DEV);
+		printf("Error opening serial port");
+		return 1;
 	}
-	return serial_port;
+
+	memset(&tty, 0, sizeof(tty));
+	if (tcgetattr(serial_port, &tty) != 0) {
+		printf("Error getting serial port attributes");
+		close(serial_port);
+		return 1;
+	}
+
+	tty.c_cflag &= ~CSTOPB; // 1 stop bit
+	tty.c_cflag |= CS8; // 8 bit
+	tty.c_cflag |= CREAD | CLOCAL; 
+	cfsetospeed(&tty, RS232_BAUDRATE); // baudrate 115200
+	printf("COM port = %s, baudrate = 115200\n", RS485_DEV);
+	//cfsetospeed(&tty, 9600); // baudrate 115200
+	//printf("COM port = %s, baudrate = 9600\n", RS485_DEV);
+    tty.c_iflag = IGNPAR;
+    tty.c_oflag = 0;
+    tty.c_lflag = 0;
+
+	tty.c_cc[VMIN] = 0; // non-blocking
+	tty.c_cc[VTIME] = 0; // non-blocking
+
+    tcflush(serial_port, TCIFLUSH);
+	tcsetattr(serial_port, TCSANOW, &tty);
+	return 0;
 }
 
+static void sendcmd(char *cmd, ssize_t len){
+	write(serial_port,cmd,len);
+}
 static void echo_rx_data(char *rx, ssize_t len) {
 	memset(buffer, 0 , BUFFER_SIZE);
 	memcpy(buffer, rx, len);
 	printf("Echo RX Data len = %d\n",len);
 	write(serial_port,buffer,len);
 }
+static ssize_t readdev(char *rx) {
+	ssize_t rx_size=0;
+	char *ip;
+	memset(rx,0,BUFFER_SIZE);
+	rx_size = read(serial_port, rx, BUFFER_SIZE);
+	//if (rx_size<=0)
+	//	return -1;
+	//ip = &rx[3];
+	//printf("ID(%x), cmd(%x), length(%d)\n", rx[0],rx[1],rx[2]);
+	//printf("RX(%d) = %s\n", rx_size, ip);
+	return rx_size;
+}
+
 static int write_square_alarm(unsigned char square, unsigned char data) {
 	FILE *file=NULL;
 	switch (square) {

@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 import serial.tools.list_ports
 from tkinter import messagebox
-
+import threading
 
 HOST = '0.0.0.0'  # 接收端的IP地址
 PORT = 8080
@@ -17,7 +17,7 @@ RS485_SET_SERVER_IP	=	0x50
 RS485_SET_SOCKET_START=	0x51
 global SERIAL_PORT
 SERIAL_PORT = "COM5"
-BAUDRATE = 115200
+BAUDRATE = 9600 # 115200
 DeviceID=0xAA
 
 Result = False
@@ -140,17 +140,26 @@ def apply_settings():
 def download_start():
     print("download")
 
+import threading
+
 def connect_device():
+    global receive_thread
 
     if connect_button['text'] == "Connect Device":
-        if send_ip_addr(DeviceID,RS485_SET_SERVER_IP) :
-            if set_socket_enable(DeviceID, RS485_SET_SOCKET_START, 1) :
+        if send_ip_addr(DeviceID, RS485_SET_SERVER_IP):
+            if set_socket_enable(DeviceID, RS485_SET_SOCKET_START, 1):
                 connect_button.config(text="Disconnect")
-                receive_data()
+                # 使用新執行緒啟動資料接收
+                receive_thread = threading.Thread(target=receive_data)
+                receive_thread.start()
     else:
-        if set_socket_enable(DeviceID, RS485_SET_SOCKET_START, 0) :
+        if set_socket_enable(DeviceID, RS485_SET_SOCKET_START, 0):
             connect_button.config(text="Connect Device")
-   
+            # 停止資料接收
+            if receive_thread.is_alive():
+                # 在這裡可以添加停止接收資料的邏輯
+                print("Stopping data reception...")
+
 
 def save_settings():
     print("save")
@@ -166,7 +175,7 @@ print(serial_ports)
 root = tk.Tk()
 root.title("Settings")
 #root.geometry('800x600')
-root.geometry('150x100')
+root.geometry('300x200')
 root.resizable(True,True)
 
 # 建立 COM Port 標籤和文字輸入欄

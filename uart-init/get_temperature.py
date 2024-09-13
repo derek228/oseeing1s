@@ -29,7 +29,7 @@ RS485_SET_SOCKET_START=	0x51
 RS485_SET_SCCKET_STOP=	0x52
 
 SERIAL_PORT = "COM5"
-BAUDRATE = 115200
+BAUDRATE = 9600 #115200
 
 def get_square(device_id) :
     data = (RS485_GET_SQUARE_STAUTS + device_id) & 0xff # {ID, 83, 1, checksum}

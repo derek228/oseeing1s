@@ -4,9 +4,9 @@
 #define TX_BUFFER	128
 #define RX_BUFFER	128
 
-//#define RS485_DEV "/dev/ttyS8"
-#define RS485_DEV "/dev/ttyS4"
-#define RS485_BAUDRATE 9600
+#define RS485_DEV "/dev/ttyS8" // rs485 port
+//#define RS485_DEV "/dev/ttyS4" // uart port
+//#define RS485_BAUDRATE 9600
 typedef struct {
 	int dev;
 	unsigned int baudrate;
