@@ -9,7 +9,7 @@ TARGET = oseeing1s
 #OBJS= main.o cJSON.o sensor.o ini-parse.o cloud-service.o http-igreent.o rs485.o led_control.o jpegenc.o alarm.o
 #OBJS= main.o ini-parse.o rs485.o led_control.o jpegenc.o alarm.o ethernet.o mi48.o cloud-service.o cJSON.o curl_thread.o
 #OBJS= main.o ini-parse.o rs485.o led_control.o jpegenc.o alarm.o ethernet.o mi48-socket.o cloud-service.o cJSON.o curl_thread.o
-OBJS= main.o rs485.o led_control.o ethernet.o mi48-socket.o
+OBJS= main.o rs485.o led_control.o ethernet.o mi48-socket.o socket_stream.o utils.o
 LIBS = -lcurl -lm -ljpeg #-lssl -lcrypto #-ljson-c -lnsl 
 
 $(TARGET) : $(OBJS)

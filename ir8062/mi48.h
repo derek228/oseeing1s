@@ -6,12 +6,12 @@ typedef struct {
 	unsigned int max;
 	unsigned int min;
 }mi48_header_t;
-
+/*
 typedef struct {
 	unsigned char alarm;
 	unsigned char temperature;
 }oseeing_config_t;
-
+*/
 typedef struct {
 	unsigned short int max;
 	unsigned short int min;
@@ -32,4 +32,7 @@ int mi48_init();
 int mi48_close();
 unsigned int mi48_get_max_temperature();
 unsigned int mi48_get_min_temperature();
+uint16_t get_temperature_alarm();
+temperature_t *get_mi48_temperature();
+temperature_t *temperature_analysis();
 #endif

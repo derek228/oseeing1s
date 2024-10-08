@@ -11,7 +11,7 @@
 #include "ethernet.h"
 #include "mi48.h"
 
-#define FW_VERSION	"1.00.04"
+#define FW_VERSION	"Oseeing1S_V1.00.01"
 static void parse_opts(int argc, char *argv[])
 {
 	char *macno;
@@ -43,6 +43,7 @@ static int factory_test() {
 }
 static void monitor_temperature() {
 	// INI file configuartion parse.
+	/*/
 	while (rs485_init()<0) {
 		printf("ERROR : Can't open RS485 port\n");
 		sleep(1);
@@ -53,6 +54,7 @@ static void monitor_temperature() {
 		printf("ERROR : DHCP IP address not found\n");
 		sleep(1);
 	}
+	*/
 	// start system LEDs control
 	led_msg_init();
 	printf("Post MAC address = %s\n", eth_get_mac());
@@ -69,10 +71,17 @@ int main(int argc, char *argv[]) {
 	// Show Oseeing firmware version
 	printf("FW Version : %s\n", FW_VERSION);
 	parse_opts(argc, argv);
+
 	if (factory_test()) {
 		return 0;
 	}
 	else {
+		if (rs485_init()<0) {
+			printf("ERROR :RS485 task inti failure...\n");
+		}
+		if (eth_init() < 0) {
+			printf("ERROR :Ehternet task init failure...\n");
+		}
 		monitor_temperature();
 	}
 }

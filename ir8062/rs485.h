@@ -3,10 +3,12 @@
 
 #define TX_BUFFER	128
 #define RX_BUFFER	128
-
 #define RS485_DEV "/dev/ttyS8" // rs485 port
 //#define RS485_DEV "/dev/ttyS4" // uart port
-//#define RS485_BAUDRATE 9600
+#define RS485_DEFAULT_BAUDRATE 9600
+#define BUFFER_SIZE	32
+#define RS485_DEFAULT_ID	0xAA
+
 typedef struct {
 	int dev;
 	unsigned int baudrate;
@@ -14,36 +16,48 @@ typedef struct {
 	char rx_buf[RX_BUFFER];
 } rs485_t;
 
+// Configuration Files
+#define FILE_ALARM_TEMPERATURE  "/mnt/mtdblock1/oseeing1s-config/alarm_temperature"
+#define FILE_RS485_CUSTOM_ID    "/mnt/mtdblock1/oseeing1s-config/id" 
+#define FILE_SERVER_IP          "/ip" 
+#define FILE_SERVER_CONNECTION  "/connect" 
 
-#define RS485_DEFAULT_ID	0xAA
-
-// define rs485 command id
-#define RS485_SET_DEVICE_ID		0x80
-#define RS485_SET_DEVICE_MODE	0x81
-
-#define RS485_SET_FRAME			0x70
-#define RS485_SET_SQUARE1		0x71
-#define RS485_SET_SQUARE2		0x72
-#define RS485_SET_SQUARE3		0x73
-#define RS485_SET_SQUARE4		0x74
-#define RS485_SET_SQUARE5		0x75
-#define RS485_SET_SQUARE6		0x76	
-#define RS485_SET_SQUARE7		0x77
-#define RS485_SET_SQUARE8		0x78
-#define RS485_SET_SQUARE9		0x79
-
-#define RS485_GET_ALARM_STATUS  0x82  //return alarm id(0~9) and max temperature length 20 bytes
-#define RS485_GET_SQUARE_STAUTS	0x83 // return all max and min temperature, 20 bytes data
-#define RS485_GET_FRAME_STATUS	0x84 // reverse command, 
+// Modbus R/W Register List , 0x03, 0x06
+// Write : Set Alarm Temperature
+// Read : Get Max temperature
+#define REG_FRAME_TEMPERATURE	0x0010
+#define REG_AREA_TEMPERATURE_1	0x0011
+#define REG_AREA_TEMPERATURE_2	0x0012
+#define REG_AREA_TEMPERATURE_3	0x0013
+#define REG_AREA_TEMPERATURE_4	0x0014
+#define REG_AREA_TEMPERATURE_5	0x0015
+#define REG_AREA_TEMPERATURE_6	0x0016
+#define REG_AREA_TEMPERATURE_7	0x0017
+#define REG_AREA_TEMPERATURE_8	0x0018
+#define REG_AREA_TEMPERATURE_9	0x0019
+#define REG_MODBUS_ID			0x0020
 
 
-#define RS485_SET_SERVER_IP		0x50
-#define RS485_SET_SOCKET_START	0x51
-#define RS485_SET_SCCKET_STOP	0x52
+// Modbus Read only Register List , 0x03
+#define REG_AREA_TEMPERATURE_ALL	0x001A
+#define REG_ALARM_STATUS_ALL		0x0001
 
-unsigned char get_square_alarm(unsigned char square);
-unsigned char get_device_id();
-unsigned char get_device_mode();
-unsigned char get_server_command();
-int send_sensor_info(unsigned char *data, int len, unsigned char cmd);
-#endif
+// Vendor command list , {id}{CMD_}{Data Length}{Data}
+#define CMD_SET_SERVER_IP		0x02 // 0x50 // set server ip
+#define CMD_SET_STREAM_TRANSFER_STATUS	0x03 // 0x51 // 0 : stop transfer, 1: Start transfer
+
+
+typedef struct {
+    unsigned char id;
+	char ipaddr[17];
+    uint16_t alarm_temperature[10];
+}oseeing_config_t;
+
+void update_oseeing_config();
+//int get_alarm_temperature();
+uint16_t get_alarm_temperature(int idx);
+unsigned char get_modbus_id();
+
+//void get_oseeing_config();
+
+#endif // RS485_H

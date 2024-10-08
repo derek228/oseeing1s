@@ -11,6 +11,7 @@
  
 #include     <stdio.h>
 #include     <stdlib.h>
+#include	<stdint.h>
 #include     <unistd.h> 
 #include     <sys/types.h>
 #include     <sys/stat.h> 
@@ -23,47 +24,20 @@
 #include <linux/serial.h>
 #include "ini-parse.h"
 #include "rs485.h"
+#include "mi48.h"
 
-#define RS485_DEV "/dev/ttyS8" // rs485 port
-#define RS485_BAUDRATE	B9600
-// File name
-// save the device id to replace default id
-#define FILE_RS485_CUSTOM_ID	"/mnt/mtdblock1/oseeing1s-config/id" 
-// socket server ip
-#define FILE_SERVER_IP	"/ip" 
-// set 1, start connect to socket server
-#define FILE_SERVER_CONNECTION	"/connect" 
-// bit 7 = 0 , full frame mode, =1 9 square mode,
-// bit 6:0 , full frame alarm temperature
-#define FILE_DEVICE_MODE	"/mnt/mtdblock1/oseeing1s-config/mode" 
-// bit 7 = 1, enable alarm, bit 6:0 , alarm temperature
-#define FILE_FRAME_ALARM	"/mnt/mtdblock1/oseeing1s-config/frame"
-#define FILE_SQUARE1_ALARM	"/mnt/mtdblock1/oseeing1s-config/square1"
-#define FILE_SQUARE2_ALARM	"/mnt/mtdblock1/oseeing1s-config/square2"
-#define FILE_SQUARE3_ALARM	"/mnt/mtdblock1/oseeing1s-config/square3"
-#define FILE_SQUARE4_ALARM	"/mnt/mtdblock1/oseeing1s-config/square4"
-#define FILE_SQUARE5_ALARM	"/mnt/mtdblock1/oseeing1s-config/square5"
-#define FILE_SQUARE6_ALARM	"/mnt/mtdblock1/oseeing1s-config/square6"
-#define FILE_SQUARE7_ALARM	"/mnt/mtdblock1/oseeing1s-config/square7"
-#define FILE_SQUARE8_ALARM	"/mnt/mtdblock1/oseeing1s-config/square8"
-#define FILE_SQUARE9_ALARM	"/mnt/mtdblock1/oseeing1s-config/square9"
-
-// end File name
-
+/* Driver-specific ioctls: ...\linux-3.10.x\include\uapi\asm-generic\ioctls.h */
+#define TIOCGRS485      0x542E
+#define TIOCSRS485      0x542F
+//#define DEBUG_RS485
+oseeing_config_t oseeing_config={0};
 unsigned char server_cmd=0;
-
-#define BUFFER_SIZE	32
-const unsigned char RESET_DEVICE_ID[6]={0xAA,0xFF,0x5A,0xA5,0x03,0x24};
-
 pthread_t uart_tid;
 int serial_port;
 static unsigned char rs485_id = 0xAA;
 static char buffer[BUFFER_SIZE];
 static char rx[BUFFER_SIZE];
-
-/* Driver-specific ioctls: ...\linux-3.10.x\include\uapi\asm-generic\ioctls.h */
-#define TIOCGRS485      0x542E
-#define TIOCSRS485      0x542F
+const unsigned char RESET_DEVICE_ID[6]={0xAA,0xFF,0x5A,0xA5,0x03,0x24};
 
 struct my_serial_rs485
 {
@@ -102,6 +76,7 @@ static void reset_tty_handler(int signal)
 		tcsetattr(saved_portfd,TCSANOW,&oldtios);
 	}
 	_exit(EXIT_FAILURE);
+	//printf("ERROR (%s): Feiled...\n",__FUNCTION__);
 }
 
 static int open_port(const char *portname)
@@ -138,8 +113,8 @@ static int open_port(const char *portname)
 	newtios.c_cc[VMIN]=0; /* block until 1 char received */
 	newtios.c_cc[VTIME]=0; /*no inter-character timer */
 	/* 115200 bps */
-	cfsetospeed(&newtios,RS485_BAUDRATE);
-	cfsetispeed(&newtios,RS485_BAUDRATE);
+	cfsetospeed(&newtios,RS485_DEFAULT_BAUDRATE);
+	cfsetispeed(&newtios,RS485_DEFAULT_BAUDRATE);
 	/* register cleanup stuff */
 	atexit(reset_tty_atexit);
 	memset(&sa,0,sizeof sa);
@@ -194,8 +169,13 @@ static int open_port(const char *portname)
 	return portfd;
 }
 
-
 static void sendcmd(char *tx, size_t size) {
+	#ifdef DEBUG_RS485
+	int i;
+	printf("Send data:\n");
+	for (i=0;i<size;i++)
+		printf("0x%x, ", tx[i]);
+	#endif
 	write(serial_port, tx, size);
 }
 
@@ -206,6 +186,13 @@ static ssize_t readdev(char *rx) {
 	return rx_size; // read(serial_port,rx,size); // return read length
 }
 
+static void echo_rx_data(char *rx, ssize_t len) {
+	memset(buffer, 0 , BUFFER_SIZE);
+	memcpy(buffer, rx, len);
+	//printf("Echo RX Data len = %d\n",len);
+	write(serial_port,buffer,len);
+}
+
 int serial_init() {
 	serial_port = open_port(RS485_DEV);
 	if (serial_port < 0) {
@@ -213,542 +200,306 @@ int serial_init() {
 	}
 	return serial_port;
 }
-
-static void echo_rx_data(char *rx, ssize_t len) {
-	memset(buffer, 0 , BUFFER_SIZE);
-	memcpy(buffer, rx, len);
-	printf("Echo RX Data len = %d\n",len);
-	write(serial_port,buffer,len);
-}
-static int write_square_alarm(unsigned char square, unsigned char data) {
-	FILE *file=NULL;
-	switch (square) {
-		case 0 : 
-			file = fopen(FILE_FRAME_ALARM,"wb");
-			break;
-		case 1:
-			file = fopen(FILE_SQUARE1_ALARM,"wb");
-			break;
-		case 2:
-			file = fopen(FILE_SQUARE2_ALARM,"wb");
-			break;
-		case 3:
-			file = fopen(FILE_SQUARE3_ALARM,"wb");
-			break;
-		case 4:
-			file = fopen(FILE_SQUARE4_ALARM,"wb");
-			break;
-		case 5:
-			file = fopen(FILE_SQUARE5_ALARM,"wb");
-			break;
-		case 6:
-			file = fopen(FILE_SQUARE6_ALARM,"wb");
-			break;
-		case 7:
-			file = fopen(FILE_SQUARE7_ALARM,"wb");
-			break;
-		case 8:
-			file = fopen(FILE_SQUARE8_ALARM,"wb");
-			break;
-		case 9:
-			file = fopen(FILE_SQUARE9_ALARM,"wb");
-			break;
-		default:
-			printf("Unknow square number %d\n", square);
-			return -1;
-			break;
+void oseeing_alarm_default() {
+	int i;
+	for (i=0;i<10;i++) {
+		oseeing_config.alarm_temperature[i]=0xFFFF;
 	}
-	if (file == NULL) {
-		printf("Can't open SQUARE%d file\n", square);
-		return -1;
-	}
-	size_t written = fwrite(&data, 1, 1, file);
-	if (written != 1) {
-		fclose(file);
-		printf("Write RS485 ID(0x%x) faile\n", data);
-		return -1;
-	}
-	fclose(file);
-	return 0;
 }
 
-static int write_server_connect(unsigned char conn) {
-	FILE *file = fopen(FILE_SERVER_CONNECTION,"wb");
-	if (file == NULL) {
-		printf("Can't open file %s\n", FILE_SERVER_CONNECTION);
-		return -1;
+void oseeing_config_init() {
+	int i;
+	if (file_exist(FILE_RS485_CUSTOM_ID) < 0) {
+		oseeing_config.id = RS485_DEFAULT_ID;
+		printf("No custom ID defile, use default id 0xAA\n");
 	}
-	size_t written = fwrite(&conn, 1, 1, file);
-	if (written != 1) {
-		fclose(file);
-		printf("Write RS485 ID(0x%x) faile\n", conn);
-		return -1;
-	}
-	fclose(file);
-	return 0;
-}
-
-static unsigned char get_server_connect() {
-	FILE *file=NULL;
-	unsigned char conn;
-	if (access(FILE_SERVER_CONNECTION, F_OK) != -1) {
-		file = fopen(FILE_SERVER_CONNECTION,"rb");
-		if (file == NULL) {
-			printf("Can't open file %s\n", FILE_SERVER_CONNECTION);
-			return 0;
-		}
-		size_t read = fread(&conn, 1, 1, file);
-		if (read != 1) {
-			fclose(file);
-			printf("Read RS485 ID(%d) fail\n", conn);
-			return 0;
-		}
-		fclose(file);
-		return conn;
-	} 
 	else {
-		printf("File %s not exist\n",FILE_SERVER_CONNECTION);
-		return 0;
-    }
-}
-
-static int write_server_ip(unsigned char *ip) {
-	FILE *file = fopen(FILE_SERVER_IP,"wb");
-	printf("IP = %s, len=%d\n", ip, strlen(ip));
-	if (file == NULL) {
-		printf("Can't open file %s\n", FILE_SERVER_IP);
-		return -1;
+		if (read_char_from_file(FILE_RS485_CUSTOM_ID,&oseeing_config.id) < 0) {
+			printf("ERROR (%s) : Can't read RS485 ID, use default id 0xAA\n");
+			oseeing_config.id = RS485_DEFAULT_ID;
+		}
+		printf("Oseeing RS485 ID = 0x%x\n", oseeing_config.id);
 	}
-	size_t written = fwrite(ip, sizeof(unsigned char), strlen(ip), file);
-	if (written != strlen(ip)) {
-		fclose(file);
-		printf("Write server IP %s faile\n", ip);
-		return -1;
+	if (file_exist(FILE_ALARM_TEMPERATURE) < 0) {
+		printf("Empty Alarm temperature setting. disable all alarm\n");
+		oseeing_alarm_default();
 	}
-	fclose(file);
-	return 0;
-}
-
-static int get_server_ip(unsigned char *ip) {
-	FILE *file=NULL;
-	long filesize;
-	if (access(FILE_SERVER_IP, F_OK) != -1) {
-		file = fopen(FILE_SERVER_IP,"rb");
-		if (file == NULL) {
-			printf("Can't open file %s\n", FILE_SERVER_IP);
-			return -1;
-		}
-		fseek(file,0,SEEK_END);
-		filesize=ftell(file);
-		rewind(file);
-		if (filesize>16) { // MAC address max size is 16 byte
-			fclose(file);
-			printf("Wrong file size of ip=%d bytes\n", filesize);
-			return -1;
-		}
-		memset(ip,0,17);
-		size_t read = fread(ip, 1, filesize, file);
-		if (read != filesize) {
-			fclose(file);
-			printf("Read ip(%s) fail\n", ip);
-			return -1;
-		}
-		fclose(file);
-		return 0;
-	} 
 	else {
-		printf("File %s not exist\n",FILE_SERVER_IP);
-		return -1;
-    }
-}
-
-static int write_device_id(unsigned char id) {
-	FILE *file = fopen(FILE_RS485_CUSTOM_ID,"wb");
-	if (file == NULL) {
-		printf("Can't open file %s\n", FILE_RS485_CUSTOM_ID);
-		return -1;
-	}
-	size_t written = fwrite(&id, sizeof(unsigned char), 1, file);
-	if (written != 1) {
-		fclose(file);
-		printf("Write RS485 ID(0x%x) faile\n", id);
-		return -1;
-	}
-	fclose(file);
-	printf("Current ID (%d) change to New ID (%d)\n", rs485_id, id);
-	rs485_id = id;
-	return 0;
-}
-
-static int write_device_mode(unsigned char mode) {
-	FILE *file = fopen(FILE_DEVICE_MODE,"wb");
-	if (file == NULL) {
-		printf("Can't open file %s\n", FILE_DEVICE_MODE);
-		return -1;
-	}
-	size_t written = fwrite(&mode, sizeof(unsigned char), 1, file);
-	if (written != 1) {
-		fclose(file);
-		printf("Write RS485 ID(0x%x) faile\n", mode);
-		return -1;
-	}
-	fclose(file);
-	return 0;
-}
-
-static int is_reset_id_cmd(char *rx, ssize_t len) {
-	// Check reset rs485 id
-
-	if (len == 6) {
-		if (memcmp(rx,RESET_DEVICE_ID,6)==0) {
-			if (access(FILE_RS485_CUSTOM_ID, F_OK) < 0) {
-				printf("No custom ID define...\n");
-				return 1;
-			}
-			if (remove(FILE_RS485_CUSTOM_ID) == 0) {
-				printf("Reset RS485 ID as 0xAA\n");
-				rs485_id = RS485_DEFAULT_ID;
-				return 1;
-			}
+		if ( (read_shortint_from_file(FILE_ALARM_TEMPERATURE, oseeing_config.alarm_temperature)) < 0) {
+			printf("ERROR (%s) : Can't read Alarm temperature config, Disable all\n");
+			oseeing_alarm_default();
 		}
+#ifdef DEBUG_RS485		
 		else {
-			printf("Reset RS485 ID fail...\n");
-			return -1;
+			printf("===== Alarm Setting =====\n");
+			for (i=0; i<10; i++) {
+				printf("%d , ", oseeing_config.alarm_temperature[i]);
+			}
 		}
+#endif		
 	}
-	else
-		return 0;
 }
-static int check_command_format(unsigned char id, unsigned char cmd, unsigned cmdlen, ssize_t len) {
-	if (id != rs485_id) {
-		printf("Unmatch RS485 ID(0x%x) with %x\n", rs485_id, id);
-		return -1;
-	}
-	if ( (cmdlen+3) != (len) ) {
-		printf("rx data lose, length(%d) not match data length(%d)\n", len, cmdlen);
-		return -1;
-	}
-	if ( (cmd>0x90) || (cmd<0x50) ) {
-		printf("Command(0x%x) out of define\n", cmd);
-		return -1;
-	}
-	return 0;
+
+static int set_rs485_id_config(unsigned char *id) {
+	oseeing_config.id = *id;
+	return write_char_to_file(FILE_RS485_CUSTOM_ID, id,1);
 }
-static int rx_data_parse(char *rx, ssize_t len) {
-	int ret = 0;
-	unsigned char *data;
-	unsigned char id = rx[0];
-	unsigned char cmd = rx[1];
-	unsigned char cmdlen;
-	ret = is_reset_id_cmd(rx,len) ; 
-	if (ret == 1) {
+
+static int set_alarm_area_config(int idx, short int temp) {
+	read_alarm_temperature();
+	oseeing_config.alarm_temperature[idx]=temp;
+	return write_shortint_to_file(FILE_ALARM_TEMPERATURE, &oseeing_config.alarm_temperature[0], 10);
+}
+
+static int oseeing_tool_config_check(char *rx, ssize_t len) {
+	if ((rx[0]==0xF1) && (rx[1]==0xF1)) {
+		if ((rx[2]==0x01) && (rx[3]==0x01)) { // reset RS485 ID
+			if (file_exist(FILE_RS485_CUSTOM_ID)<0) {
+				printf("No RS485 custom ID defined\n");
+			}
+			else if (remove(FILE_RS485_CUSTOM_ID) == 0) {
+				printf("Reset RS485 custom ID(0x%x) as 0x%x\n", oseeing_config.id,RS485_DEFAULT_ID);
+				oseeing_config.id = RS485_DEFAULT_ID;
+			}
+		}
+		else if ((rx[2]==0x02) && (rx[3]==0x02)) { // Set Stream transfer enable/disable
+			printf("Set Socket connect %d\n", rx[4]);
+			write_char_to_file(FILE_SERVER_CONNECTION,&rx[4],1);
+		}
+		else if ((rx[2] == 0x03) && (rx[3]==0x03)) { // Set server ip address
+			printf("Set Socket server IP(%d) = %s\n",rx[4], &rx[5]);
+			write_char_to_file(FILE_SERVER_IP,&rx[5],rx[4]);
+		}
+		else 
+			printf("Unknow command 0x%x\n", rx[2]);
+
 		echo_rx_data(rx,len);
 		return 1;
 	}
-	else if (ret <0) return -1;
-	
-	cmdlen=rx[2];
-	if ( check_command_format (id, cmd, cmdlen, len) < 0 ) {
-		printf("Incorrect command format..\n");
+	return 0;
+}
+
+static int read_modbus_regs(char *rx, ssize_t len) {
+	uint16_t reg = (rx[2]<<8) | rx[3];
+	uint16_t readlen = (rx[4] << 8) | rx[5];
+	uint16_t regdata=0, crc, sendlen;
+	char sendbuf[32]={0};
+	char *data;
+	int i;
+#ifdef DEBUG_RS485	
+	for (i=0; i<len; i++)
+		printf("0x%x, ",rx[i]);
+#endif	
+	temperature_t *temp=temperature_analysis();
+	printf("\nRead Reg(0x%x), len=%d\n", reg, readlen);
+	sendbuf[0]=rx[0];
+	sendbuf[1]=rx[1];
+	sendbuf[2]=readlen*2;
+	data = &sendbuf[3];
+
+	switch (reg) {
+		case REG_AREA_TEMPERATURE_ALL: 
+			for (i=0; i<10; i++) {
+				data[i*2] = (temp[i].max&0xff00) >> 8;
+				data[i*2+1] = temp[i].max&0xff;
+				printf("send data[%d]=0x%x, 0x%x\n",i, data[i*2],data[i*2+1]);
+			}
+			//printf("Get All area temperature\n");
+		break;
+		case REG_FRAME_TEMPERATURE:
+			data[0] = (temp[0].max & 0xff00) >> 8;
+			data[1] = temp[0].max & 0xff;
+			printf("Get temperature[0] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_1:
+			data[0] = (temp[1].max & 0xff00) >> 8;
+			data[1] = temp[1].max & 0xff;
+			printf("Get temperature[1] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_2:
+			data[0] = (temp[2].max & 0xff00) >> 8;
+			data[1] = temp[2].max & 0xff;
+			printf("Get temperature[2] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_3:
+			data[0] = (temp[3].max & 0xff00) >> 8;
+			data[1] = temp[3].max & 0xff;
+			printf("Get temperature[3] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_4:
+			data[0] = (temp[4].max & 0xff00) >> 8;
+			data[1] = temp[4].max & 0xff;
+			printf("Get temperature[4] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_5:
+			data[0] = (temp[5].max & 0xff00) >> 8;
+			data[1] = temp[5].max & 0xff;
+			printf("Get temperature[5] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_6:
+			data[0] = (temp[6].max & 0xff00) >> 8;
+			data[1] = temp[6].max & 0xff;
+			printf("Get temperature[6] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_7:
+			data[0] = (temp[7].max & 0xff00) >> 8;
+			data[1] = temp[7].max & 0xff;
+			printf("Get temperature[7] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_8:
+			data[0] = (temp[8].max & 0xff00) >> 8;
+			data[1] = temp[8].max & 0xff;
+			printf("Get temperature[8] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
+		case REG_AREA_TEMPERATURE_9:
+			data[0] = (temp[9].max & 0xff00) >> 8;
+			data[1] = temp[9].max & 0xff;
+			printf("Get temperature[9] max = 0x%x, 0x%x\n",data[0],data[1]);
+		break;	
+		case REG_ALARM_STATUS_ALL :
+			regdata=get_temperature_alarm();
+			data[0] = (regdata&0xff00) >> 8;
+			data[1] = regdata&0xff;
+			printf("Get All area temperature 0x%x\n", regdata);
+		break;
+		default:
+		// Error code, {ID}{fun|0x80}{Error code}{CRC}
+			printf("Read register ERROR : UNKNOW Register value 0x%x\n", reg);
+			sendbuf[1] |= 0x80;
+			sendbuf[2] = 0x02; // Illegal Address
+			// snedbuf[3..4]=CRC
+			calculate_modbus_crc(sendbuf, 3 );
+			sendcmd(sendbuf, 5);
+			return;
+		break;
+	}
+	sendlen = sendbuf[2]+3;
+	crc = calculate_modbus_crc(sendbuf, sendbuf[2]+3 );
+	sendbuf[sendlen] = crc&0xff;
+	sendbuf[sendlen+1] = (crc&0xff00) >> 8;
+	sendcmd(sendbuf, sendbuf[2]+3+2); // data + header(2bytes)+CRC(2bytes)
+}
+
+// {ID} {function} {reg (2bytes)} {data (2bytes)} {CRC}
+// return : {ID} {function} {data} {CRC}
+static int write_modbus_regs(char *rx, ssize_t len){
+	uint16_t reg = (rx[2]<<8) | rx[3];
+	uint16_t writedata = (rx[4] << 8) | rx[5];;
+	char sendbuf[16] = {0};
+	switch (reg) {
+		case REG_FRAME_TEMPERATURE:
+			set_alarm_area_config(0, writedata);
+			printf("Set alarm temperature[0] = %d\n",oseeing_config.alarm_temperature[0]);
+		break;
+		case REG_AREA_TEMPERATURE_1:
+			set_alarm_area_config(1, writedata);
+			printf("Set alarm temperature[1] = %d\n",oseeing_config.alarm_temperature[1]);
+		break;
+		case REG_AREA_TEMPERATURE_2:
+			set_alarm_area_config(2, writedata);
+			printf("Set alarm temperature[2] = %d\n",oseeing_config.alarm_temperature[2]);
+		break;
+		case REG_AREA_TEMPERATURE_3:
+			set_alarm_area_config(3, writedata);
+			printf("Set alarm temperature[3] = %d\n",oseeing_config.alarm_temperature[3]);
+		break;
+		case REG_AREA_TEMPERATURE_4:
+			set_alarm_area_config(4, writedata);
+			printf("Set alarm temperature[4] = %d\n",oseeing_config.alarm_temperature[4]);
+		break;
+		case REG_AREA_TEMPERATURE_5:
+			set_alarm_area_config(5, writedata);
+			printf("Set alarm temperature[5] = %d\n",oseeing_config.alarm_temperature[5]);
+		break;
+		case REG_AREA_TEMPERATURE_6:
+			set_alarm_area_config(6, writedata);
+			printf("Set alarm temperature[6] = %d\n",oseeing_config.alarm_temperature[6]);
+		break;
+		case REG_AREA_TEMPERATURE_7:
+			set_alarm_area_config(7, writedata);
+			printf("Set alarm temperature[7] = %d\n",oseeing_config.alarm_temperature[7]);
+		break;
+		case REG_AREA_TEMPERATURE_8:
+			set_alarm_area_config(8, writedata);
+			printf("Set alarm temperature[8] = %d\n",oseeing_config.alarm_temperature[8]);
+		break;
+		case REG_AREA_TEMPERATURE_9:
+			set_alarm_area_config(9, writedata);
+			printf("Set alarm temperature[9] = %d\n",oseeing_config.alarm_temperature[9]);
+		break;	
+		case REG_MODBUS_ID:
+			set_rs485_id_config(&rx[5]);
+			printf("Set Modbus ID = 0x%x\n", oseeing_config.id);
+		break;
+		default:
+		// Error code, {ID}{fun|0x80}{Error code}{CRC}
+			printf("Write register ERROR : UNKNOW Register value 0x%x\n", reg);
+			sendbuf[0] = rx[0];
+			sendbuf[1] = rx[1] | 0x80;
+			sendbuf[2] = 0x02; // Illegal Address
+			// snedbuf[3..4]=CRC
+			calculate_modbus_crc(sendbuf, 3 );
+			sendcmd(sendbuf, 5);
+			return -1;
+		break;
+	}
+	//read_alarm_temperature();
+	return 1;
+}
+static int rx_data_parse(char *rx, ssize_t len) {
+	int ret = 0;
+	/*
+	unsigned char *data;
+	unsigned char id = rx[0];
+	unsigned char fun = rx[1];
+	short int reg = (rx[2]<<8) | rx[3];
+	unsigned char cmdlen;
+	*/
+	char *data, id, fun;
+	//uint16_t reg;
+	if (check_modbus_crc(rx, len)==0) { 
+		printf("ERROR : CRC ERROR \n");
 		return -1;
 	}
-	switch (cmd) {
-		case RS485_SET_DEVICE_ID:
-			if (rs485_id == rx[3]) {
-				printf("New ID (%d) == evice ID (%d) \n", rx[3], rs485_id);
-				usleep(50000);
-				echo_rx_data(rx,len);
-				return 1;
-			}
-			if (write_device_id(rx[3])==0) {
-				echo_rx_data(rx,len);
-				rs485_id = rx[3];
-			}
-			else {
-				printf("RS485_SET_DEVICE_ID fail...\n");
-				return -1;
-			}
-			break;
-		case RS485_SET_DEVICE_MODE:
-			if (write_device_mode(rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_DEVICE_MODE fail...\n");
-				return -1;
-			}			
-			break;
-		case RS485_SET_FRAME:
-			if (write_square_alarm(0,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE1 fail...\n");
-				return -1;
-			}
-			break;
-		case RS485_SET_SQUARE1:
-			if (write_square_alarm(1,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE1 fail...\n");
-				return -1;
-			}			
-			break;
-		case RS485_SET_SQUARE2:
-			if (write_square_alarm(2,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE2 fail...\n");
-				return -1;
-			}			break;
-			break;
-		case RS485_SET_SQUARE3:
-			if (write_square_alarm(3,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE3 fail...\n");
-				return -1;
-			}			break;
-			break;
-		case RS485_SET_SQUARE4:
-			if (write_square_alarm(4,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE4 fail...\n");
-				return -1;
-			}			break;
-			break;
-		case RS485_SET_SQUARE5:
-			if (write_square_alarm(5,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE5 fail...\n");
-				return -1;
-			}			break;
-			break;
-		case RS485_SET_SQUARE6:
-			if (write_square_alarm(6,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE6 fail...\n");
-				return -1;
-			}			break;
-			break;
-		case RS485_SET_SQUARE7:
-			if (write_square_alarm(7,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE7 fail...\n");
-				return -1;
-			}			break;
-			break;
-		case RS485_SET_SQUARE8:
-			if (write_square_alarm(8,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE8 fail...\n");
-				return -1;
-			}			break;
-			break;
-		case RS485_SET_SQUARE9:
-			if (write_square_alarm(9,rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SQUARE9 fail...\n");
-				return -1;
-			}
-			break;
-		case RS485_GET_ALARM_STATUS :
-			printf("Get alarm command\n");
-			server_cmd = RS485_GET_ALARM_STATUS;
-			break;
-		case RS485_GET_FRAME_STATUS:
-			server_cmd = RS485_GET_FRAME_STATUS;
-			break;
-		case RS485_GET_SQUARE_STAUTS:
-			printf("Get Square command\n");
-			server_cmd = RS485_GET_SQUARE_STAUTS;
-			break;
-		case RS485_SET_SERVER_IP:
-			if (write_server_ip(&rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SERVER_IP fail...\n");
-				return -1;
-			}
-			break;
-		case RS485_SET_SOCKET_START:
-			if (write_server_connect(rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SOCKET_START fail...\n");
-				return -1;
-			}
-			break;
-		case RS485_SET_SCCKET_STOP:
-			if (write_server_connect(rx[3])==0)
-				echo_rx_data(rx,len);
-			else {
-				printf("RS485_SET_SCCKET_STOP fail...\n");
-				return -1;
-			}
-			break;
-		default:
-			printf("Unknow command id 0x%x\n", cmd);
-			break;
+	id = rx[0];
+	fun = rx[1];
+	if (id != oseeing_config.id)
+		return -1;
+	if (fun == 0x03) // read reg
+		read_modbus_regs(rx, len);
+	else if (fun == 0x06) { // write reg
+		if (write_modbus_regs(rx,len) > 0)
+			echo_rx_data(rx,len);
 	}
-	
+	else
+		printf("ERROR : Unknow Modbus function code 0x%x\n", fun);
+	return ret;
 }
+
 
 // export function
-
-unsigned char get_square_alarm(unsigned char square) {
-	FILE *file=NULL;
-	unsigned char data;
-	switch (square) {
-		case 0:
-			if (access(FILE_FRAME_ALARM, F_OK) != -1)
-				file = fopen(FILE_FRAME_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 1:
-			if (access(FILE_SQUARE1_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE1_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 2:
-			if (access(FILE_SQUARE2_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE2_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 3:
-			if (access(FILE_SQUARE3_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE3_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 4:
-			if (access(FILE_SQUARE4_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE4_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 5:
-			if (access(FILE_SQUARE5_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE5_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 6:
-			if (access(FILE_SQUARE6_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE6_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 7:
-			if (access(FILE_SQUARE7_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE7_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 8:
-			if (access(FILE_SQUARE8_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE8_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		case 9:
-			if (access(FILE_SQUARE9_ALARM, F_OK) != -1)
-				file = fopen(FILE_SQUARE9_ALARM,"rb");
-			else {
-				printf("SQUARE %d file not exist...\n", square);
-				return -1;
-			}				
-			break;
-		default:
-			printf("Unknow square number %d\n", square);
-			break;
-	}
-	if (file == NULL) {
-		printf("Can't open file %s\n", FILE_SERVER_CONNECTION);
-		return 0;
-	}
-	size_t read = fread(&data, 1, 1, file);
-	if (read != 1) {
-		fclose(file);
-		printf("Read(%d) RS485 data(%d) fail\n", read, data);
-		return 0;
-	}
-	fclose(file);
-	return data;
+int read_alarm_temperature() {
+	int ret = 0, i;
+	if (file_exist(FILE_ALARM_TEMPERATURE) < 0)
+		return -1;
+	ret = read_shortint_from_file(FILE_ALARM_TEMPERATURE, oseeing_config.alarm_temperature);
+#ifdef DEBUG_RS485	
+	for (i=0; i<10; i++) 
+		printf("area[%d] = 0x%x\n",i, oseeing_config.alarm_temperature[i]);
+#endif	
+	return ret; 
 }
 
-unsigned char get_device_id() {
-	FILE *file=NULL;
+uint16_t get_alarm_temperature(int idx) {
+	return oseeing_config.alarm_temperature[idx];
+}
+
+unsigned char get_modbus_id() {
 	unsigned char id;
-	if (access(FILE_RS485_CUSTOM_ID, F_OK) != -1) {
-		file = fopen(FILE_RS485_CUSTOM_ID,"rb");
-		if (file == NULL) {
-			printf("Can't open file %s\n", FILE_RS485_CUSTOM_ID);
-			return RS485_DEFAULT_ID;
-		}
-		size_t read = fread(&id, 1, 1, file);
-		if (read != 1) {
-			fclose(file);
-			printf("Read RS485 ID(%d) fail\n", id);
-			return RS485_DEFAULT_ID;
-		}
-		fclose(file);
-		return id;
-	} 
-	else {
-		printf("Use default RS485 ID 0xAA\n");
+	if (file_exist(FILE_RS485_CUSTOM_ID) < 0)
 		return RS485_DEFAULT_ID;
-    }
-}
-
-unsigned char get_device_mode() {
-	FILE *file=NULL;
-	unsigned char mode;
-	if (access(FILE_DEVICE_MODE, F_OK) != -1) {
-		file = fopen(FILE_DEVICE_MODE,"rb");
-		if (file == NULL) {
-			printf("Can't open file %s\n", FILE_DEVICE_MODE);
-			return 0;
-		}
-		size_t read = fread(&mode, 1, 1, file);
-		if (read != 1) {
-			fclose(file);
-			printf("Read RS485 Device mode(%d) fail\n", mode);
-			return 0;
-		}
-		fclose(file);
-		return mode;
-	} 
-	else {
-		printf("File %s not exist\n",FILE_DEVICE_MODE);
-		return 0;
-    }	
+	read_char_from_file(RS485_DEFAULT_ID,&id);
+	return id;
 }
 
 unsigned char get_server_command() {
@@ -771,10 +522,12 @@ int send_sensor_info(unsigned char *data, int len, unsigned char cmd) {
 		memcpy(&buffer[3], data, len);
 	}
 	write(serial_port,buffer,len+3);
+#ifdef DEBUG_RS485	
 	printf("Send info(%d) = ", len+3);
 	for (i=0 ; i<len+3; i++) 
 		printf("0x%x ", buffer[i]);
 	printf("\n");
+#endif	
 	return 0;
 }
 
@@ -785,7 +538,9 @@ void *uart_thread(void *arg) {
     while (1) {
 
 		rx_size=readdev(rx);
-		if (rx_size > 3)
+		if (oseeing_tool_config_check(rx, rx_size))
+			continue;
+		if (rx_size > 6)
 			rx_data_parse(rx,rx_size);
     }
     close(serial_port);
@@ -793,7 +548,7 @@ void *uart_thread(void *arg) {
 
     return;
 }
-void curl_thread_destory() {
+void uart_thread_destory() {
     pthread_cancel(uart_tid);
     pthread_join(uart_tid, NULL);  
 }	

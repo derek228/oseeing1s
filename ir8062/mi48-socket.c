@@ -16,12 +16,33 @@
 #include "ini-parse.h"
 #include "mi48.h"
 #include "rs485.h"
+#include "socket_stream.h"
+
 #define NEW_THERMAL_SCAN 1
-#define SERVER_IP "192.168.100.70"  // Server IP address (fix ip )
-#define SERVER_PORT 8080
-int sockfd=-1;
-struct sockaddr_in server_addr;
-int socket_connected=-1;
+
+
+#define FILE_RS485_CUSTOM_ID	"/mnt/mtdblock1/oseeing1s-config/id" 
+// socket server ip
+#define FILE_SERVER_IP	"/ip" 
+// set 1, start connect to socket server
+#define FILE_SERVER_CONNECTION	"/connect" 
+// bit 7 = 0 , full frame mode, =1 9 square mode,
+// bit 6:0 , full frame alarm temperature
+#define FILE_DEVICE_MODE	"/mnt/mtdblock1/oseeing1s-config/mode" 
+// bit 7 = 1, enable alarm, bit 6:0 , alarm temperature
+#define FILE_SQUARE1_ALARM	"/mnt/mtdblock1/oseeing1s-config/square1"
+#define FILE_SQUARE2_ALARM	"/mnt/mtdblock1/oseeing1s-config/square2"
+#define FILE_SQUARE3_ALARM	"/mnt/mtdblock1/oseeing1s-config/square3"
+#define FILE_SQUARE4_ALARM	"/mnt/mtdblock1/oseeing1s-config/square4"
+#define FILE_SQUARE5_ALARM	"/mnt/mtdblock1/oseeing1s-config/square5"
+#define FILE_SQUARE6_ALARM	"/mnt/mtdblock1/oseeing1s-config/square6"
+#define FILE_SQUARE7_ALARM	"/mnt/mtdblock1/oseeing1s-config/square7"
+#define FILE_SQUARE8_ALARM	"/mnt/mtdblock1/oseeing1s-config/square8"
+#define FILE_SQUARE9_ALARM	"/mnt/mtdblock1/oseeing1s-config/square9"
+
+//int sockfd=-1;
+
+
 
 // Thermal sensor hardware signal setting
 #define CAP_SIG_ID          0x0a 
@@ -50,8 +71,9 @@ static uint8_t mi48_data[9920]={0};
 static unsigned short temp_kelvin[62][80]={0};
 //static uint8_t data[9920]={0};
 
-oseeing_config_t oseeing_config[10] = {0};
+//oseeing_config_t oseeing_config[10] = {0};
 temperature_t temperature[10] = {0};
+uint16_t temperature_alarm=0;
 coordinate_t area[9]= { { 1, 1,26,20},
 						{27, 1,52,20},
 						{53, 1,78,20},
@@ -250,123 +272,7 @@ static void mi48_header_parse(uint8_t *mi48_header_raw)
 	}
 */
 }
-#define FILE_RS485_CUSTOM_ID	"/mnt/mtdblock1/oseeing1s-config/id" 
-// socket server ip
-#define FILE_SERVER_IP	"/ip" 
-// set 1, start connect to socket server
-#define FILE_SERVER_CONNECTION	"/connect" 
-// bit 7 = 0 , full frame mode, =1 9 square mode,
-// bit 6:0 , full frame alarm temperature
-#define FILE_DEVICE_MODE	"/mnt/mtdblock1/oseeing1s-config/mode" 
-// bit 7 = 1, enable alarm, bit 6:0 , alarm temperature
-#define FILE_SQUARE1_ALARM	"/mnt/mtdblock1/oseeing1s-config/square1"
-#define FILE_SQUARE2_ALARM	"/mnt/mtdblock1/oseeing1s-config/square2"
-#define FILE_SQUARE3_ALARM	"/mnt/mtdblock1/oseeing1s-config/square3"
-#define FILE_SQUARE4_ALARM	"/mnt/mtdblock1/oseeing1s-config/square4"
-#define FILE_SQUARE5_ALARM	"/mnt/mtdblock1/oseeing1s-config/square5"
-#define FILE_SQUARE6_ALARM	"/mnt/mtdblock1/oseeing1s-config/square6"
-#define FILE_SQUARE7_ALARM	"/mnt/mtdblock1/oseeing1s-config/square7"
-#define FILE_SQUARE8_ALARM	"/mnt/mtdblock1/oseeing1s-config/square8"
-#define FILE_SQUARE9_ALARM	"/mnt/mtdblock1/oseeing1s-config/square9"
-static unsigned char get_server_connect() {
-	FILE *file=NULL;
-	unsigned char conn;
-	if (access(FILE_SERVER_CONNECTION, F_OK) != -1) {
-		file = fopen(FILE_SERVER_CONNECTION,"rb");
-		if (file == NULL) {
-			printf("Can't open file %s\n", FILE_SERVER_CONNECTION);
-			return 0;
-		}
-		size_t read = fread(&conn, 1, 1, file);
-		if (read != 1) {
-			fclose(file);
-			printf("Read RS485 ID(%d) fail\n", conn);
-			return 0;
-		}
-		fclose(file);
-		return conn;
-	} 
-	else {
-		//printf("File %s not exist\n",FILE_SERVER_CONNECTION);
-		return 0;
-    }
-}
-static int get_server_ip(unsigned char *ip) {
-	FILE *file=NULL;
-	long filesize;
-	if (access(FILE_SERVER_IP, F_OK) != -1) {
-		file = fopen(FILE_SERVER_IP,"rb");
-		if (file == NULL) {
-			printf("Can't open file %s\n", FILE_SERVER_IP);
-			return -1;
-		}
-		fseek(file,0,SEEK_END);
-		filesize=ftell(file);
-		rewind(file);
-		if (filesize>16) { // MAC address max size is 16 byte
-			fclose(file);
-			printf("Wrong file size of ip=%d bytes\n", filesize);
-			return -1;
-		}
-		memset(ip,0,17);
-		size_t read = fread(ip, 1, filesize, file);
-		if (read != filesize) {
-			fclose(file);
-			printf("Read ip(%s) fail\n", ip);
-			return -1;
-		}
-		fclose(file);
-		return 0;
-	} 
-	else {
-		printf("File %s not exist\n",FILE_SERVER_IP);
-		return -1;
-    }
-}
-int is_socket_connection() {
-	// check config
-	static unsigned char ipaddr[17]={0};
-	if (get_server_connect()==0) {
-		socket_connected = -1;
-		if (sockfd >=0 )
-			close(sockfd);
-		sockfd = -1;
-		
-		return -1;
-	}
-	else {
-		if (get_server_ip(ipaddr)<0)
-			return -1;
-	}
-    // create socket
-	if (sockfd <0) {
-		printf("Socket disconnect, try to init...\n");
-		server_addr.sin_family = AF_INET;
-		server_addr.sin_port = htons(SERVER_PORT);
-    // 将 IP 地址转换为二进制格式并存储在 server_addr 结构中
-//		if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
-		if (inet_pton(AF_INET, ipaddr, &server_addr.sin_addr) <= 0) {
-			perror("Invalid address/ Address not supported");
-			return -1;
-		}
-
-	    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-	        perror("Socket creation failed");
-			return -1;
-	    }
-	}
-	if (socket_connected < 0) {
-	    // 连接到接收端
-		socket_connected=connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
-   		if (socket_connected < 0) {
-	        perror("Connection Failed");
-	        return -1;
-	    }
-		return 1;
-	}
-	return 1;
-}
-
+/*
 int oseeing_config_update() {
 	unsigned char data, alarm, temp,i;
 	for (i=0;i<10;i++) {
@@ -381,48 +287,7 @@ int oseeing_config_update() {
 	}
 	return 0;
 }
-
-int send_alarm_status(unsigned char cmd) {
-	int i,j,len=0;
-	unsigned char buf[20];
-	printf("%s\n",__FUNCTION__);	
-	for (i=0;i<10;i++) {
-		if (oseeing_config[i].alarm) {
-			if (oseeing_config[i].temperature < temperature[i].max) {
-				buf[len] = i;
-				buf[len+1] = temperature[i].max;
-				len += 2;
-				printf("len = %d ,ID(%d) temperature(%d) > alarm temperature(%d)\n", len, i, temperature[i].max, oseeing_config[i].temperature);
-			}
-			else 
-				printf("ID(%d) temperature(%d) < alarm temperature(%d)\n", i, temperature[i].max, oseeing_config[i].temperature);
-		}
-		else {
-			printf("ID(%d) alarm disable...\n",i);
-		}
-	}
-	if (len ==0 ) {
-		printf("No temperature alarm...\n");
-		buf[0]=0;
-	}
-	send_sensor_info(buf,len,cmd);
-}
-// reverse
-int send_frame_status(unsigned char cmd) {
-	printf("%s\n",__FUNCTION__);
-
-}
-int send_square_status(unsigned char cmd) {
-	unsigned char buf[20]={0};
-	int i;
-	for (i=0; i<10; i++) {
-		buf[i*2]=temperature[i].max;
-		buf[i*2+1]=temperature[i].min;
-	}
-	send_sensor_info(buf, 20, cmd);
-	printf("%s\n",__FUNCTION__);
-	
-}
+*/
 
 void mi48_raw_to_kelvin() {
 	int i,j;
@@ -434,14 +299,15 @@ void mi48_raw_to_kelvin() {
 	printf("temperature[30][30]= %d\n",temp_kelvin[30][30]);
 }
 
-int temperature_analysis(unsigned char cmd) {
+temperature_t *temperature_analysis() {
 	int i,j,k;
 	unsigned short int max, min;
-	oseeing_config_update();
+	//oseeing_config_init();
 	mi48_raw_to_kelvin();
-	temperature[0].max = (mi48_header.max-2735) / 10;
-	temperature[0].min = (mi48_header.min-2735) / 10;
+	temperature[0].max = mi48_header.max; // (mi48_header.max-2735) / 10;
+	temperature[0].min = mi48_header.min; // (mi48_header.min-2735) / 10;
 	printf("Frame max temperature = %d, min temperature = %d\n", temperature[0].max,temperature[0].min);
+	temperature_alarm = 0;
 	for (i=1; i<10; i++) {
 		min=0xFFFF;
 		max=0;
@@ -454,29 +320,26 @@ int temperature_analysis(unsigned char cmd) {
 					min = (temp_kelvin[j][k]);
 					//min = (temp_kelvin[j][k]-2735)/10;
 			}
-			temperature[i].max = (max-2735)/10;
-			temperature[i].min = (min-2735)/10;
+			temperature[i].max = max; // (max-2735); //10;
+			temperature[i].min = min; // (min-2735); // /10;
+		}
+		if (temperature[i].max >= get_alarm_temperature(i)) {
+			temperature_alarm = (1<<i) | temperature_alarm;
 		}
 		printf("area[%d] x1(%d),y1(%d),x2(%d),y2(%d) : max=%d, min=%d\n", i, area[i-1].x1,area[i-1].y1,area[i-1].x2,area[i-1].y2,temperature[i].max,temperature[i].min);
 	}
-	switch (cmd) {
-		case RS485_GET_ALARM_STATUS :
-			send_alarm_status(cmd);
-			break ; 
-		case RS485_GET_SQUARE_STAUTS:
-			send_square_status(cmd);
-			break;
-		case RS485_GET_FRAME_STATUS:
-			send_frame_status(cmd);
-			break;
-		default : 
-			printf("Unknow server request (0x%x)\n", cmd);
-			return -1;
-	}
-
+	printf("Alarm = 0x%x\n", temperature_alarm);
+	return temperature;
 }
 
-//int mi48_scan(char *data) {
+uint16_t get_temperature_alarm() {
+	return temperature_alarm;
+}
+
+temperature_t *get_mi48_temperature() {
+	return &temperature[0];
+}
+
 int mi48_scan() {
 	int spi_count = 0;
 	unsigned char cmd;
@@ -493,17 +356,9 @@ int mi48_scan() {
 			memcpy(&mi48_data[spi_count*160],rx,size);
 		}
 // Try to send mi48_data to socket
-		if (is_socket_connection() > 0) {
-			ssize_t sent_bytes = send(sockfd, mi48_data, sizeof(mi48_data), MSG_NOSIGNAL);
-//			printf("sent_bytes = %d\n", sent_bytes);
-			if (sent_bytes < 0) {
-				perror("Failed to send mi48_data");
-				socket_connected = -1;
-				close(sockfd);
-				sockfd = -1;
-			}
-		}
+		socket_transfer(mi48_data);
 		// socket end
+
 // Check modbus server request 
 		cmd = get_server_command();
 		if (cmd)
@@ -539,7 +394,7 @@ int mi48_init()
 {
 	int ret=0;
 	ret=ir8062_hwinit();
-	oseeing_config_update();
+	oseeing_config_init();
 	if (ret < 0) 
 		printf("ERROR : MI48 initial failure\n");
 	return ret;
