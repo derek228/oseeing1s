@@ -40,6 +40,7 @@ typedef struct {
 
 // Modbus Read only Register List , 0x03
 #define REG_AREA_TEMPERATURE_ALL	0x001A
+#define REG_AREA_ALARM_ALL          0x001B
 #define REG_ALARM_STATUS_ALL		0x0001
 
 // Vendor command list , {id}{CMD_}{Data Length}{Data}

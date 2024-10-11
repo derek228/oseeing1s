@@ -13,7 +13,7 @@
 #include "led_control.h"
 #include "ethernet.h"
 
-#define DEBUG_ETH
+//#define DEBUG_ETH
 #define RJ45_CONN_STATUS    "/sys/class/net/eth0/carrier"
 pthread_t eth_tid;
 char device_macno[18]={0};

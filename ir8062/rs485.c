@@ -302,58 +302,64 @@ static int read_modbus_regs(char *rx, ssize_t len) {
 			for (i=0; i<10; i++) {
 				data[i*2] = (temp[i].max&0xff00) >> 8;
 				data[i*2+1] = temp[i].max&0xff;
-				printf("send data[%d]=0x%x, 0x%x\n",i, data[i*2],data[i*2+1]);
+				printf("send temperature data[%d]=0x%x, 0x%x\n",i, data[i*2],data[i*2+1]);
 			}
 			//printf("Get All area temperature\n");
 		break;
+		case REG_AREA_ALARM_ALL:
+			for (i=0; i<10; i++) {
+				data[i*2] = (oseeing_config.alarm_temperature[i] & 0xff00) >> 8;
+				data[i*2+1] = oseeing_config.alarm_temperature[i] & 0xff;
+				printf("send alarm data[%d]=0x%x, 0x%x\n",i, data[i*2],data[i*2+1]);
+			}
 		case REG_FRAME_TEMPERATURE:
-			data[0] = (temp[0].max & 0xff00) >> 8;
-			data[1] = temp[0].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[0] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[0] & 0xff;
 			printf("Get temperature[0] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_1:
-			data[0] = (temp[1].max & 0xff00) >> 8;
-			data[1] = temp[1].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[1] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[1] & 0xff;
 			printf("Get temperature[1] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_2:
-			data[0] = (temp[2].max & 0xff00) >> 8;
-			data[1] = temp[2].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[2] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[2] & 0xff;
 			printf("Get temperature[2] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_3:
-			data[0] = (temp[3].max & 0xff00) >> 8;
-			data[1] = temp[3].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[3] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[3] & 0xff;
 			printf("Get temperature[3] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_4:
-			data[0] = (temp[4].max & 0xff00) >> 8;
-			data[1] = temp[4].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[4] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[4] & 0xff;
 			printf("Get temperature[4] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_5:
-			data[0] = (temp[5].max & 0xff00) >> 8;
-			data[1] = temp[5].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[5] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[5] & 0xff;
 			printf("Get temperature[5] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_6:
-			data[0] = (temp[6].max & 0xff00) >> 8;
-			data[1] = temp[6].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[6] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[6] & 0xff;
 			printf("Get temperature[6] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_7:
-			data[0] = (temp[7].max & 0xff00) >> 8;
-			data[1] = temp[7].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[7] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[7] & 0xff;
 			printf("Get temperature[7] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_8:
-			data[0] = (temp[8].max & 0xff00) >> 8;
-			data[1] = temp[8].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[8] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[8] & 0xff;
 			printf("Get temperature[8] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;
 		case REG_AREA_TEMPERATURE_9:
-			data[0] = (temp[9].max & 0xff00) >> 8;
-			data[1] = temp[9].max & 0xff;
+			data[0] = (oseeing_config.alarm_temperature[9] & 0xff00) >> 8;
+			data[1] = oseeing_config.alarm_temperature[9] & 0xff;
 			printf("Get temperature[9] max = 0x%x, 0x%x\n",data[0],data[1]);
 		break;	
 		case REG_ALARM_STATUS_ALL :

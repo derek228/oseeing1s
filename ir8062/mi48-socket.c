@@ -296,7 +296,7 @@ void mi48_raw_to_kelvin() {
             temp_kelvin[i][j] = (mi48_data[(i * 80 + j) * 2] << 8) | mi48_data[(i * 80 + j) * 2 + 1];
         }
     }
-	printf("temperature[30][30]= %d\n",temp_kelvin[30][30]);
+	//printf("temperature[30][30]= %d\n",temp_kelvin[30][30]);
 }
 
 temperature_t *temperature_analysis() {
