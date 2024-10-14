@@ -308,6 +308,9 @@ temperature_t *temperature_analysis() {
 	temperature[0].min = mi48_header.min; // (mi48_header.min-2735) / 10;
 	printf("Frame max temperature = %d, min temperature = %d\n", temperature[0].max,temperature[0].min);
 	temperature_alarm = 0;
+	if (temperature[0].max >= get_alarm_temperature(0)) {
+		temperature_alarm |= 1; //  | temperature_alarm;
+	}
 	for (i=1; i<10; i++) {
 		min=0xFFFF;
 		max=0;

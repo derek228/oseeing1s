@@ -333,7 +333,7 @@ parse_default_ini()
 #print_ini_setting()
 # 建立主視窗
 root = tk.Tk()
-root.title("Settings")
+root.title("Oseeing Tool")
 root.geometry('800x600')
 root.resizable(True,True)
 
@@ -380,7 +380,7 @@ button_frame_alarm = tk.Button(root, text="確認", command=btn_set_frame_alarm_
 button_frame_alarm.grid(row=2, column=2, padx=5)
 
 # Set Square1 Alarm params
-square1_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square1_alarm_temperature = tk.Label(root, text="Area1 Alarm Temperature:", anchor="w")
 square1_alarm_temperature.grid(row=3,column=0,padx=5, pady=5, sticky='w')
 square1_alarm_entry = tk.Entry(root, width=5)
 #square1_alarm_entry.insert(0,oseeing.alarm[1])
@@ -392,7 +392,7 @@ button_square1 = tk.Button(root, text="確認", command=btn_set_square1_alarm_te
 button_square1.grid(row=3, column=2, padx=5)
 
 # Set Square2 Alarm params
-square2_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square2_alarm_temperature = tk.Label(root, text="Area2 Alarm Temperature:", anchor="w")
 square2_alarm_temperature.grid(row=4,column=0,padx=5, pady=5, sticky='w')
 square2_alarm_entry = tk.Entry(root, width=5)
 #square2_alarm_entry.insert(0,oseeing.alarm[2])
@@ -404,7 +404,7 @@ button_square2 = tk.Button(root, text="確認", command=btn_set_square2_alarm_te
 button_square2.grid(row=4, column=2, padx=5)
 
 # Set Square3 Alarm params
-square3_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square3_alarm_temperature = tk.Label(root, text="Area3 Alarm Temperature:", anchor="w")
 square3_alarm_temperature.grid(row=5,column=0,padx=5, pady=5, sticky='w')
 square3_alarm_entry = tk.Entry(root, width=5)
 #square3_alarm_entry.insert(0,oseeing.alarm[3])
@@ -416,7 +416,7 @@ button_square3 = tk.Button(root, text="確認", command=btn_set_square3_alarm_te
 button_square3.grid(row=5, column=2, padx=5)
 
 # Set Square4 Alarm params
-square4_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square4_alarm_temperature = tk.Label(root, text="Area4 Alarm Temperature:", anchor="w")
 square4_alarm_temperature.grid(row=6,column=0,padx=5, pady=5, sticky='w')
 square4_alarm_entry = tk.Entry(root, width=5)
 #square4_alarm_entry.insert(0,oseeing.alarm[4])
@@ -428,7 +428,7 @@ button_square4 = tk.Button(root, text="確認", command=btn_set_square4_alarm_te
 button_square4.grid(row=6, column=2, padx=5)
 
 # Set Square5 Alarm params
-square5_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square5_alarm_temperature = tk.Label(root, text="Area5 Alarm Temperature:", anchor="w")
 square5_alarm_temperature.grid(row=7,column=0,padx=5, pady=5, sticky='w')
 square5_alarm_entry = tk.Entry(root, width=5)
 #square5_alarm_entry.insert(0,oseeing.alarm[5])
@@ -440,7 +440,7 @@ button_square5 = tk.Button(root, text="確認", command=btn_set_square5_alarm_te
 button_square5.grid(row=7, column=2, padx=5)
 
 # Set Square6 Alarm params
-square6_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square6_alarm_temperature = tk.Label(root, text="Area6 Alarm Temperature:", anchor="w")
 square6_alarm_temperature.grid(row=8,column=0,padx=5, pady=5, sticky='w')
 square6_alarm_entry = tk.Entry(root, width=5)
 #square6_alarm_entry.insert(0,oseeing.alarm[6])
@@ -452,7 +452,7 @@ button_square6 = tk.Button(root, text="確認", command=btn_set_square6_alarm_te
 button_square6.grid(row=8, column=2, padx=5)
 
 # Set Square7 Alarm params
-square7_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square7_alarm_temperature = tk.Label(root, text="Area7 Alarm Temperature:", anchor="w")
 square7_alarm_temperature.grid(row=9,column=0,padx=5, pady=5, sticky='w')
 square7_alarm_entry = tk.Entry(root, width=5)
 #square7_alarm_entry.insert(0,oseeing.alarm[7])
@@ -464,7 +464,7 @@ button_square7 = tk.Button(root, text="確認", command=btn_set_square7_alarm_te
 button_square7.grid(row=9, column=2, padx=5)
 
 # Set Square8 Alarm params
-square8_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square8_alarm_temperature = tk.Label(root, text="Area8 Alarm Temperature:", anchor="w")
 square8_alarm_temperature.grid(row=10,column=0,padx=5, pady=5, sticky='w')
 square8_alarm_entry = tk.Entry(root, width=5)
 #square8_alarm_entry.insert(0,oseeing.alarm[8])
@@ -476,7 +476,7 @@ button_square8 = tk.Button(root, text="確認", command=btn_set_square8_alarm_te
 button_square8.grid(row=10, column=2, padx=5)
 
 # Set Square9 Alarm params
-square9_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
+square9_alarm_temperature = tk.Label(root, text="Area9 Alarm Temperature:", anchor="w")
 square9_alarm_temperature.grid(row=11,column=0,padx=5, pady=5, sticky='w')
 square9_alarm_entry = tk.Entry(root, width=5)
 #square9_alarm_entry.insert(0,oseeing.alarm[9])
@@ -510,14 +510,12 @@ selected_option = tk.StringVar()
 selected_option.set(options[oseeing.unit])  # 設置默認值為 "凱式溫度"
 # 創建下拉選單
 dropdown = tk.OptionMenu(root, selected_option, *options)
-dropdown.grid(row=14,column=0,padx=5, sticky='w')
+dropdown.grid(row=14,column=1,padx=5, sticky='w')
 # 創建一個標籤顯示選中的值
-temperature_unit_label = tk.Label(root, text="溫度單位：", anchor="w")
-temperature_unit_label.grid(row=14,column=2,padx=5, pady=5, sticky='w')
+temperature_unit_label = tk.Label(root, text=f"溫度單位：{options[oseeing.unit]}", anchor="w")
+temperature_unit_label.grid(row=14,column=0,padx=5, pady=5, sticky='w')
 # 綁定變量的變化事件
 selected_option.trace_add("write", update_label)
-update_label()
 
 # 啟動主迴圈
 root.mainloop()
-
