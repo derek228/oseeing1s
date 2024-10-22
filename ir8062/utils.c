@@ -202,3 +202,10 @@ int read_shortint_from_file(char *fname, short int *data) {
 	fclose(file);
 	return ret;
 }
+
+void set_mi48_reg(uint8_t reg, uint8_t val) 
+{
+    char *cmd;
+    sprintf(cmd,"/i2cset -f -y 1 0x40 0x%x 0x%x", reg, val);
+    printf("system call : %s\n",cmd);
+}

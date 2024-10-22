@@ -17,7 +17,7 @@ REG_AREA_TEMPERATURE_6	=   0x0016
 REG_AREA_TEMPERATURE_7	=   0x0017
 REG_AREA_TEMPERATURE_8	=   0x0018
 REG_AREA_TEMPERATURE_9	=   0x0019
-
+REG_TEMPERATURE_UNIT    =   0x0002
 # Write Only register
 REG_MODBUS_ID   =   0x0020
 
@@ -31,54 +31,66 @@ def connect_device():
 
 def update_config() :
     hex_value = frame_alarm_entry.get().strip()
-    oseeing.alarm[0]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[0] = int(hex_value)
+    #oseeing.alarm[0]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
 # Square 1
     hex_value = square1_alarm_entry.get().strip()
-    oseeing.alarm[1]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[1] = int(hex_value)
+    #oseeing.alarm[1]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square1 alarm temperature={oseeing.alarm[1]}")
 
 # Square 2
     hex_value = square2_alarm_entry.get().strip()
-    oseeing.alarm[2]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[2] = int(hex_value)
+    #oseeing.alarm[2]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square2 alarm temperature={oseeing.alarm[2]}")
 
 # Square 3
     hex_value = square3_alarm_entry.get().strip()
-    oseeing.alarm[3]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[3] = int(hex_value)
+    #oseeing.alarm[3]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square3 alarm temperature={oseeing.alarm[3]}")
 
 # Square 4
     hex_value = square4_alarm_entry.get().strip()
-    oseeing.alarm[4]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[4] = int(hex_value)
+    #oseeing.alarm[4]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square4 alarm temperature={oseeing.alarm[4]}")
 
 # Square 5
     hex_value = square5_alarm_entry.get().strip()
-    oseeing.alarm[5]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[5] = int(hex_value)
+    #oseeing.alarm[5]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square5 alarm temperature={oseeing.alarm[5]}")
 
 # Square 6
     hex_value = square6_alarm_entry.get().strip()
-    oseeing.alarm[6]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[6] = int(hex_value)
+    #oseeing.alarm[6]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square6 alarm temperature={oseeing.alarm[6]}")
 
 # Square 7
     hex_value = square7_alarm_entry.get().strip()
-    oseeing.alarm[7]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[7] = int(hex_value)
+    #oseeing.alarm[7]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square7 alarm temperature={oseeing.alarm[7]}")
 
 # Square 8
     hex_value = square8_alarm_entry.get().strip()
-    oseeing.alarm[8]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[8] = int(hex_value)
+    #oseeing.alarm[8]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square8 alarm temperature={oseeing.alarm[8]}")
 
 # Square 9
     hex_value = square9_alarm_entry.get().strip()
-    oseeing.alarm[9]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
+    oseeing.alarm[9] = int(hex_value)
+    #oseeing.alarm[9]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
     print(f"Square9 alarm temperature={oseeing.alarm[9]}")
+    '''
     for i in range(10) :
         temp = oseeing.get_temperature_unit_str(i)
         print(f"index = {i} type = {type(temp)} {temp}")
+    '''
 def parse_default_ini () :
     ini_config = configparser.ConfigParser()
     try :
@@ -128,6 +140,7 @@ def download_settings() :
  
     #write frame
     update_config()
+    oseeing.write_reg(REG_TEMPERATURE_UNIT,oseeing.unit)
     idx = 0
     for val in oseeing.alarm :
         reg=REG_FRAME_TEMPERATURE+idx
@@ -163,16 +176,7 @@ def save_settings():
     	}
     with open('oseeing1s.ini', 'a') as configfile:
         config.write(configfile)
-    print("Settings saved to settings.ini")    
-
-def scan_serial_ports():
-    ports = serial.tools.list_ports.comports()  # scan serial port
-    return [port.device for port in ports]  #  retrun available device
-
-def select_port(selected_port):
-    oseeing.set_serial(selected_port)
-    com_port_label.config(text=f"COM port device : {selected_port}")
-    print(f"Selece COM port: {selected_port}")
+    print("Settings saved to oseeing1s.ini")    
 
 def btn_write_id():
     hex_value = write_id_entry.get().strip()
@@ -187,12 +191,13 @@ def btn_write_id():
     
     if oseeing.write_reg(REG_MODBUS_ID, id) != None:
         messagebox.showerror("確認", f"ID({hex(id)})修改完成")
-        oseeing.set_id(hex_value)
-        id_entry.delete(0, tk.END)  
-        id_entry.insert(0,hex(int(oseeing.id,16))) 
+        oseeing.id = id
+        #oseeing.set_id(hex_value)
+        #id_entry.delete(0, tk.END)  
+        #id_entry.insert(0,hex(int(oseeing.id,16))) 
     else :
         messagebox.showerror("錯誤", "連接異常")
-
+'''
 def btn_set_id():
     print(f"id_entry = {type(id_entry)}")
     hex_value = id_entry.get().strip()
@@ -209,7 +214,7 @@ def btn_set_id():
         messagebox.showerror("確認", f"Oseeing 裝置已連接, ID({hex(id)})")
     else :
         messagebox.showerror("錯誤", "連接異常")
-
+'''
 # Square 1
 def btn_set_square1_alarm_temperature():
     hex_value = square1_alarm_entry.get().strip()
@@ -284,6 +289,7 @@ def btn_set_frame_alarm_temperature():
 
 # 定義一個函數來更新顯示選中的值
 def update_label(*args):
+    curr_unit = oseeing.unit
     selected_value = selected_option.get()
     oseeing.unit = options.index(selected_value)  # 獲取選中的值在列表中的索引
     temperature_unit_label.config(text=f"溫度單位：{selected_value}")
@@ -298,9 +304,9 @@ def update_label(*args):
     temp8_unit_label.config(text=f"0.1 {options[oseeing.unit]}")
     temp9_unit_label.config(text=f"0.1 {options[oseeing.unit]}")
     print(f"Unit = {selected_value}, Index = {oseeing.unit}")
-    update_temperature_unit()
+    update_temperature_unit(curr_unit)
 
-def update_temperature_unit() :
+def update_temperature_unit(curr) :
     frame_alarm_entry.delete(0,tk.END)
     square1_alarm_entry.delete(0,tk.END)
     square2_alarm_entry.delete(0,tk.END)
@@ -311,16 +317,16 @@ def update_temperature_unit() :
     square7_alarm_entry.delete(0,tk.END)
     square8_alarm_entry.delete(0,tk.END)
     square9_alarm_entry.delete(0,tk.END)
-    frame_alarm_entry.insert(0,oseeing.get_temperature_unit(0))
-    square1_alarm_entry.insert(0,oseeing.get_temperature_unit(1))
-    square2_alarm_entry.insert(0,oseeing.get_temperature_unit(2))
-    square3_alarm_entry.insert(0,oseeing.get_temperature_unit(3))
-    square4_alarm_entry.insert(0,oseeing.get_temperature_unit(4))
-    square5_alarm_entry.insert(0,oseeing.get_temperature_unit(5))
-    square6_alarm_entry.insert(0,oseeing.get_temperature_unit(6))
-    square7_alarm_entry.insert(0,oseeing.get_temperature_unit(7))
-    square8_alarm_entry.insert(0,oseeing.get_temperature_unit(8))
-    square9_alarm_entry.insert(0,oseeing.get_temperature_unit(9))
+    frame_alarm_entry.insert(0,oseeing.get_temperature_unit(0, curr))
+    square1_alarm_entry.insert(0,oseeing.get_temperature_unit(1, curr))
+    square2_alarm_entry.insert(0,oseeing.get_temperature_unit(2, curr))
+    square3_alarm_entry.insert(0,oseeing.get_temperature_unit(3, curr))
+    square4_alarm_entry.insert(0,oseeing.get_temperature_unit(4, curr))
+    square5_alarm_entry.insert(0,oseeing.get_temperature_unit(5, curr))
+    square6_alarm_entry.insert(0,oseeing.get_temperature_unit(6, curr))
+    square7_alarm_entry.insert(0,oseeing.get_temperature_unit(7, curr))
+    square8_alarm_entry.insert(0,oseeing.get_temperature_unit(8, curr))
+    square9_alarm_entry.insert(0,oseeing.get_temperature_unit(9, curr))
 
 # variable initial
 oseeing = None
@@ -348,7 +354,7 @@ temp6_unit_label = None
 temp7_unit_label = None
 temp8_unit_label = None
 temp9_unit_label = None
-
+write_id_entry = None
 def oseeing_setting_start(oc, root) :
 # variable initial
     global mac_result
@@ -376,7 +382,7 @@ def oseeing_setting_start(oc, root) :
     global temp7_unit_label 
     global temp8_unit_label 
     global temp9_unit_label 
-
+    global write_id_entry
 
     oseeing=oc
     ip_result= "None"
@@ -393,7 +399,7 @@ def oseeing_setting_start(oc, root) :
 
     # 建立 COM Port 標籤和文字輸入欄
 
-    # Set Modbus ID
+    '''# Set Modbus ID
     rs485_id_label = tk.Label(root, text="Modbus Device ID:", anchor="w")
     rs485_id_label.grid(row=1,column=0,padx=5, pady=5, sticky='w')
     id_entry = tk.Entry(root, width=5)
@@ -405,14 +411,14 @@ def oseeing_setting_start(oc, root) :
     id_entry.grid(row=1, column=1, padx=5)
     button_id = tk.Button(root, text="連線", command=btn_set_id)
     button_id.grid(row=1, column=2, padx=5)
-
+'''
     # Set Frame Alarm params
     frame_alarm_temperature = tk.Label(root, text="Frame Alarm Temperature:", anchor="w")
     frame_alarm_temperature.grid(row=2,column=0,padx=5, pady=5, sticky='w')
     frame_alarm_entry = tk.Entry(root, width=5)
-    #frame_alarm_entry.insert(0,oseeing.alarm[0])
-    #val = oseeing.get_temperature_unit(0)
-    frame_alarm_entry.insert(0,oseeing.get_temperature_unit(0))
+    frame_alarm_entry.insert(0,oseeing.alarm[0])
+    print(f"{type(oseeing.alarm[0])} : {oseeing.alarm[0]}")
+    #frame_alarm_entry.insert(0,oseeing.get_temperature_unit(0))
     frame_alarm_entry.grid(row=2, column=1, padx=5)
     #temp_frame = tk.Label(root, text="°C")
     temp0_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
@@ -424,8 +430,9 @@ def oseeing_setting_start(oc, root) :
     square1_alarm_temperature = tk.Label(root, text="Area1 Alarm Temperature:", anchor="w")
     square1_alarm_temperature.grid(row=3,column=0,padx=5, pady=5, sticky='w')
     square1_alarm_entry = tk.Entry(root, width=5)
-    #square1_alarm_entry.insert(0,oseeing.alarm[1])
-    square1_alarm_entry.insert(0,oseeing.get_temperature_unit(1))
+    square1_alarm_entry.insert(0,oseeing.alarm[1])
+    print(f"{type(oseeing.alarm[1])} : {oseeing.alarm[1]}")
+    #square1_alarm_entry.insert(0,oseeing.get_temperature_unit(1))
     square1_alarm_entry.grid(row=3, column=1, padx=5, sticky='w')
     temp1_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp1_unit_label.grid(row=3, column=3, padx=0)
@@ -436,8 +443,9 @@ def oseeing_setting_start(oc, root) :
     square2_alarm_temperature = tk.Label(root, text="Area2 Alarm Temperature:", anchor="w")
     square2_alarm_temperature.grid(row=4,column=0,padx=5, pady=5, sticky='w')
     square2_alarm_entry = tk.Entry(root, width=5)
-    #square2_alarm_entry.insert(0,oseeing.alarm[2])
-    square2_alarm_entry.insert(0,oseeing.get_temperature_unit(2))
+    square2_alarm_entry.insert(0,oseeing.alarm[2])
+    print(f"{type(oseeing.alarm[2])} : {oseeing.alarm[2]}")
+    #square2_alarm_entry.insert(0,oseeing.get_temperature_unit(2))
     square2_alarm_entry.grid(row=4, column=1, padx=5, sticky='w')
     temp2_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp2_unit_label.grid(row=4, column=3, padx=0)
@@ -448,8 +456,9 @@ def oseeing_setting_start(oc, root) :
     square3_alarm_temperature = tk.Label(root, text="Area3 Alarm Temperature:", anchor="w")
     square3_alarm_temperature.grid(row=5,column=0,padx=5, pady=5, sticky='w')
     square3_alarm_entry = tk.Entry(root, width=5)
-    #square3_alarm_entry.insert(0,oseeing.alarm[3])
-    square3_alarm_entry.insert(0,oseeing.get_temperature_unit(3))
+    square3_alarm_entry.insert(0,oseeing.alarm[3])
+    print(f"{type(oseeing.alarm[3])} : {oseeing.alarm[3]}")
+    #square3_alarm_entry.insert(0,oseeing.get_temperature_unit(3))
     square3_alarm_entry.grid(row=5, column=1, padx=5, sticky='w')
     temp3_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp3_unit_label.grid(row=5, column=3, padx=0)
@@ -460,8 +469,9 @@ def oseeing_setting_start(oc, root) :
     square4_alarm_temperature = tk.Label(root, text="Area4 Alarm Temperature:", anchor="w")
     square4_alarm_temperature.grid(row=6,column=0,padx=5, pady=5, sticky='w')
     square4_alarm_entry = tk.Entry(root, width=5)
-    #square4_alarm_entry.insert(0,oseeing.alarm[4])
-    square4_alarm_entry.insert(0,oseeing.get_temperature_unit(4))
+    square4_alarm_entry.insert(0,oseeing.alarm[4])
+    print(f"{type(oseeing.alarm[4])} : {oseeing.alarm[4]}")
+    #square4_alarm_entry.insert(0,oseeing.get_temperature_unit(4))
     square4_alarm_entry.grid(row=6, column=1, padx=5, sticky='w')
     temp4_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp4_unit_label.grid(row=6, column=3, padx=0)
@@ -472,8 +482,9 @@ def oseeing_setting_start(oc, root) :
     square5_alarm_temperature = tk.Label(root, text="Area5 Alarm Temperature:", anchor="w")
     square5_alarm_temperature.grid(row=7,column=0,padx=5, pady=5, sticky='w')
     square5_alarm_entry = tk.Entry(root, width=5)
-    #square5_alarm_entry.insert(0,oseeing.alarm[5])
-    square5_alarm_entry.insert(0,oseeing.get_temperature_unit(5))
+    square5_alarm_entry.insert(0,oseeing.alarm[5])
+    print(f"{type(oseeing.alarm[5])} : {oseeing.alarm[5]}")
+    #square5_alarm_entry.insert(0,oseeing.get_temperature_unit(5))
     square5_alarm_entry.grid(row=7, column=1, padx=5, sticky='w')
     temp5_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp5_unit_label.grid(row=7, column=3, padx=0)
@@ -484,8 +495,9 @@ def oseeing_setting_start(oc, root) :
     square6_alarm_temperature = tk.Label(root, text="Area6 Alarm Temperature:", anchor="w")
     square6_alarm_temperature.grid(row=8,column=0,padx=5, pady=5, sticky='w')
     square6_alarm_entry = tk.Entry(root, width=5)
-    #square6_alarm_entry.insert(0,oseeing.alarm[6])
-    square6_alarm_entry.insert(0,oseeing.get_temperature_unit(6))
+    square6_alarm_entry.insert(0,oseeing.alarm[6])
+    print(f"{type(oseeing.alarm[6])} : {oseeing.alarm[6]}")
+    #square6_alarm_entry.insert(0,oseeing.get_temperature_unit(6))
     square6_alarm_entry.grid(row=8, column=1, padx=5, sticky='w')
     temp6_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp6_unit_label.grid(row=8, column=3, padx=0)
@@ -496,8 +508,9 @@ def oseeing_setting_start(oc, root) :
     square7_alarm_temperature = tk.Label(root, text="Area7 Alarm Temperature:", anchor="w")
     square7_alarm_temperature.grid(row=9,column=0,padx=5, pady=5, sticky='w')
     square7_alarm_entry = tk.Entry(root, width=5)
-    #square7_alarm_entry.insert(0,oseeing.alarm[7])
-    square7_alarm_entry.insert(0,oseeing.get_temperature_unit(7))
+    square7_alarm_entry.insert(0,oseeing.alarm[7])
+    print(f"{type(oseeing.alarm[7])} : {oseeing.alarm[7]}")
+    #square7_alarm_entry.insert(0,oseeing.get_temperature_unit(7))
     square7_alarm_entry.grid(row=9, column=1, padx=5, sticky='w')
     temp7_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp7_unit_label.grid(row=9, column=3, padx=0)
@@ -508,8 +521,9 @@ def oseeing_setting_start(oc, root) :
     square8_alarm_temperature = tk.Label(root, text="Area8 Alarm Temperature:", anchor="w")
     square8_alarm_temperature.grid(row=10,column=0,padx=5, pady=5, sticky='w')
     square8_alarm_entry = tk.Entry(root, width=5)
-    #square8_alarm_entry.insert(0,oseeing.alarm[8])
-    square8_alarm_entry.insert(0,oseeing.get_temperature_unit(8))
+    square8_alarm_entry.insert(0,oseeing.alarm[8])
+    print(f"{type(oseeing.alarm[8])} : {oseeing.alarm[8]}")
+    #square8_alarm_entry.insert(0,oseeing.get_temperature_unit(8))
     square8_alarm_entry.grid(row=10, column=1, padx=5, sticky='w')
     temp8_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp8_unit_label.grid(row=10, column=3, padx=0)
@@ -520,8 +534,9 @@ def oseeing_setting_start(oc, root) :
     square9_alarm_temperature = tk.Label(root, text="Area9 Alarm Temperature:", anchor="w")
     square9_alarm_temperature.grid(row=11,column=0,padx=5, pady=5, sticky='w')
     square9_alarm_entry = tk.Entry(root, width=5)
-    #square9_alarm_entry.insert(0,oseeing.alarm[9])
-    square9_alarm_entry.insert(0,oseeing.get_temperature_unit(9))
+    square9_alarm_entry.insert(0,oseeing.alarm[9])
+    print(f"{type(oseeing.alarm[9])} : {oseeing.alarm[9]}")
+    #square9_alarm_entry.insert(0,oseeing.get_temperature_unit(9))
     square9_alarm_entry.grid(row=11, column=1, padx=5, sticky='w')
     temp9_unit_label = tk.Label(root, text=f"0.1 {options[oseeing.unit]}", anchor="w")
     temp9_unit_label.grid(row=11, column=3, padx=0)

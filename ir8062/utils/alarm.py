@@ -109,7 +109,6 @@ def oseeing_alarm_start(oc, root) :
         
             squares[square_id] = label
 # 開啟獨立執行緒來讀取 UART 數據
-    print(squares)
     thread = threading.Thread(target=read_modbus, daemon=True)
     thread.start()
 

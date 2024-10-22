@@ -71,7 +71,6 @@ static uint8_t mi48_data[9920]={0};
 static unsigned short temp_kelvin[62][80]={0};
 //static uint8_t data[9920]={0};
 
-//oseeing_config_t oseeing_config[10] = {0};
 temperature_t temperature[10] = {0};
 uint16_t temperature_alarm=0;
 coordinate_t area[9]= { { 1, 1,26,20},
@@ -326,6 +325,7 @@ temperature_t *temperature_analysis() {
 			temperature[i].max = max; // (max-2735); //10;
 			temperature[i].min = min; // (min-2735); // /10;
 		}
+		temperature_alarm = 0;
 		if (temperature[i].max >= get_alarm_temperature(i)) {
 			temperature_alarm = (1<<i) | temperature_alarm;
 		}
@@ -363,9 +363,11 @@ int mi48_scan() {
 		// socket end
 
 // Check modbus server request 
+/*
 		cmd = get_server_command();
 		if (cmd)
 			temperature_analysis(cmd);
+			*/
 	}
 
 	return 0; // fail, spi not ready

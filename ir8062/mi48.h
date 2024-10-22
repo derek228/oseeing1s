@@ -6,12 +6,7 @@ typedef struct {
 	unsigned int max;
 	unsigned int min;
 }mi48_header_t;
-/*
-typedef struct {
-	unsigned char alarm;
-	unsigned char temperature;
-}oseeing_config_t;
-*/
+
 typedef struct {
 	unsigned short int max;
 	unsigned short int min;

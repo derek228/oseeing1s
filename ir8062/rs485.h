@@ -8,7 +8,7 @@
 #define RS485_DEFAULT_BAUDRATE 9600
 #define BUFFER_SIZE	32
 #define RS485_DEFAULT_ID	0xAA
-
+#define DEFAULT_TEMPERATURE_UNIT	0 // 0: K, 1:F, 2:C
 typedef struct {
 	int dev;
 	unsigned int baudrate;
@@ -21,6 +21,7 @@ typedef struct {
 #define FILE_RS485_CUSTOM_ID    "/mnt/mtdblock1/oseeing1s-config/id" 
 #define FILE_SERVER_IP          "/ip" 
 #define FILE_SERVER_CONNECTION  "/connect" 
+#define FILE_TEMPERATURE_UNIT	"/mnt/mtdblock1/oseeing1s-config/unit"
 
 // Modbus R/W Register List , 0x03, 0x06
 // Write : Set Alarm Temperature
@@ -36,6 +37,7 @@ typedef struct {
 #define REG_AREA_TEMPERATURE_8	0x0018
 #define REG_AREA_TEMPERATURE_9	0x0019
 #define REG_MODBUS_ID			0x0020
+#define REG_TEMPERATURE_UNIT	0x0002
 
 
 // Modbus Read only Register List , 0x03
@@ -50,6 +52,7 @@ typedef struct {
 
 typedef struct {
     unsigned char id;
+	unsigned char unit;
 	char ipaddr[17];
     uint16_t alarm_temperature[10];
 }oseeing_config_t;
@@ -57,7 +60,6 @@ typedef struct {
 void update_oseeing_config();
 //int get_alarm_temperature();
 uint16_t get_alarm_temperature(int idx);
-unsigned char get_modbus_id();
 
 //void get_oseeing_config();
 

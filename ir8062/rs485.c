@@ -25,6 +25,7 @@
 #include "ini-parse.h"
 #include "rs485.h"
 #include "mi48.h"
+#include "utils.h"
 
 /* Driver-specific ioctls: ...\linux-3.10.x\include\uapi\asm-generic\ioctls.h */
 #define TIOCGRS485      0x542E
@@ -238,16 +239,44 @@ void oseeing_config_init() {
 		}
 #endif		
 	}
+	if (file_exist(FILE_TEMPERATURE_UNIT) < 0) {
+		oseeing_config.unit = DEFAULT_TEMPERATURE_UNIT;
+		printf("No temperature unit file, use default unit(K)\n");
+	}
+	else {
+		if (read_char_from_file(FILE_TEMPERATURE_UNIT,&oseeing_config.unit) < 0) {
+			printf("ERROR (%s) : Can't read temperature unit, use default unit(K)\n");
+			oseeing_config.unit = DEFAULT_TEMPERATURE_UNIT;
+		}
+		printf("Oseeing temperature unit = %d\n", oseeing_config.unit);
+	}
 }
 
 static int set_rs485_id_config(unsigned char *id) {
 	oseeing_config.id = *id;
 	return write_char_to_file(FILE_RS485_CUSTOM_ID, id,1);
 }
+static int set_temperature_unit_config(unsigned char *unit) {
+	oseeing_config.unit = *unit;
+	printf("%s : UNIT = %d\n", __FUNCTION__, oseeing_config.unit);
+	return write_char_to_file(FILE_TEMPERATURE_UNIT, unit,1);
+}
+char unit_str[3]={'K','F','C'};
 
 static int set_alarm_area_config(int idx, short int temp) {
 	read_alarm_temperature();
-	oseeing_config.alarm_temperature[idx]=temp;
+	switch (oseeing_config.unit) {
+		case 1 : // F2K
+			oseeing_config.alarm_temperature[idx] = F2K(temp);
+		break;
+		case 2 : // C2K
+			oseeing_config.alarm_temperature[idx] = C2K(temp);
+		break;
+		default: // K
+			oseeing_config.alarm_temperature[idx]=temp;
+		break;
+	}
+	printf("Set Alarm[%d] is %d(%c)=%d(K)\n",idx,temp,unit_str[oseeing_config.unit],oseeing_config.alarm_temperature[idx]);
 	return write_shortint_to_file(FILE_ALARM_TEMPERATURE, &oseeing_config.alarm_temperature[0], 10);
 }
 
@@ -278,7 +307,20 @@ static int oseeing_tool_config_check(char *rx, ssize_t len) {
 	}
 	return 0;
 }
-
+static uint16_t temperature_unit_conversion(uint16_t t) {
+	uint16_t ret = t;
+	if (t==0xFFFF) {
+		printf("Alarm disable");
+	}
+	else if (oseeing_config.unit == 1) {
+		ret = K2F(t) ; 
+	}
+	else if (oseeing_config.unit == 2) {
+		ret = K2C(t);
+	}
+	printf("Temperature unit conversion(%d) = %d\n", oseeing_config.unit, ret);
+	return ret;
+}
 static int read_modbus_regs(char *rx, ssize_t len) {
 	uint16_t reg = (rx[2]<<8) | rx[3];
 	uint16_t readlen = (rx[4] << 8) | rx[5];
@@ -298,69 +340,159 @@ static int read_modbus_regs(char *rx, ssize_t len) {
 	data = &sendbuf[3];
 
 	switch (reg) {
+		case REG_TEMPERATURE_UNIT:
+			printf("Get Unit = %d\n", oseeing_config.unit);
+			data[0] = (oseeing_config.unit & 0xff00) >> 8;
+			data[1] = oseeing_config.unit & 0xff;
+			printf("Get temperature unit = 0x%x, 0x%x\n",data[0],data[1]);
+		break;
 		case REG_AREA_TEMPERATURE_ALL: 
+			printf("Get Temperature all(Unit = %d)\n", oseeing_config.unit);
 			for (i=0; i<10; i++) {
+				#if 1 
+				regdata = temperature_unit_conversion(temp[i].max);
+				data[i*2] = (regdata & 0xff00) >> 8;
+				data[i*2+1] = regdata & 0xff;
+				#else
 				data[i*2] = (temp[i].max&0xff00) >> 8;
 				data[i*2+1] = temp[i].max&0xff;
 				printf("send temperature data[%d]=0x%x, 0x%x\n",i, data[i*2],data[i*2+1]);
+				#endif
 			}
 			//printf("Get All area temperature\n");
 		break;
 		case REG_AREA_ALARM_ALL:
 			for (i=0; i<10; i++) {
+				#if 1 
+				regdata = temperature_unit_conversion(oseeing_config.alarm_temperature[i]);
+				data[i*2] = (regdata & 0xff00) >> 8;
+				data[i*2+1] = regdata & 0xff;
+				printf("send alarm data[%d]=%d\n",i, regdata);
+				#else
 				data[i*2] = (oseeing_config.alarm_temperature[i] & 0xff00) >> 8;
 				data[i*2+1] = oseeing_config.alarm_temperature[i] & 0xff;
 				printf("send alarm data[%d]=0x%x, 0x%x\n",i, data[i*2],data[i*2+1]);
+				#endif
 			}
 		case REG_FRAME_TEMPERATURE:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[0].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[0] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[0] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[0] & 0xff;
 			printf("Get temperature[0] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_1:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[1].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[1] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[1] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[1] & 0xff;
 			printf("Get temperature[1] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_2:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[2].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[2] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[2] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[2] & 0xff;
 			printf("Get temperature[2] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_3:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[3].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[3] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[3] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[3] & 0xff;
 			printf("Get temperature[3] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_4:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[4].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[4] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[4] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[4] & 0xff;
 			printf("Get temperature[4] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_5:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[5].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[5] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[5] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[5] & 0xff;
 			printf("Get temperature[5] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_6:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[6].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[6] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[6] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[6] & 0xff;
 			printf("Get temperature[6] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_7:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[7].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[7] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[7] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[7] & 0xff;
 			printf("Get temperature[7] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_8:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[8].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[8] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[8] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[8] & 0xff;
 			printf("Get temperature[8] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;
 		case REG_AREA_TEMPERATURE_9:
+			#if 1 
+			regdata = temperature_unit_conversion(temp[9].max);
+			data[0] = (regdata & 0xff00) >> 8;
+			data[1] = regdata & 0xff;
+			printf("Get temperature[9] max = %d\n",regdata);
+			#else
 			data[0] = (oseeing_config.alarm_temperature[9] & 0xff00) >> 8;
 			data[1] = oseeing_config.alarm_temperature[9] & 0xff;
 			printf("Get temperature[9] max = 0x%x, 0x%x\n",data[0],data[1]);
+			#endif
 		break;	
 		case REG_ALARM_STATUS_ALL :
 			regdata=get_temperature_alarm();
@@ -395,47 +527,51 @@ static int write_modbus_regs(char *rx, ssize_t len){
 	switch (reg) {
 		case REG_FRAME_TEMPERATURE:
 			set_alarm_area_config(0, writedata);
-			printf("Set alarm temperature[0] = %d\n",oseeing_config.alarm_temperature[0]);
+			//printf("Set alarm[0] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[0], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_1:
 			set_alarm_area_config(1, writedata);
-			printf("Set alarm temperature[1] = %d\n",oseeing_config.alarm_temperature[1]);
+			//printf("Set alarm[1] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[1], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_2:
 			set_alarm_area_config(2, writedata);
-			printf("Set alarm temperature[2] = %d\n",oseeing_config.alarm_temperature[2]);
+			//printf("Set alarm[2] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[2], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_3:
 			set_alarm_area_config(3, writedata);
-			printf("Set alarm temperature[3] = %d\n",oseeing_config.alarm_temperature[3]);
+			//printf("Set alarm[3] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[3], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_4:
 			set_alarm_area_config(4, writedata);
-			printf("Set alarm temperature[4] = %d\n",oseeing_config.alarm_temperature[4]);
+			//printf("Set alarm[4] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[4], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_5:
 			set_alarm_area_config(5, writedata);
-			printf("Set alarm temperature[5] = %d\n",oseeing_config.alarm_temperature[5]);
+			//printf("Set alarm[5] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[5], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_6:
 			set_alarm_area_config(6, writedata);
-			printf("Set alarm temperature[6] = %d\n",oseeing_config.alarm_temperature[6]);
+			//printf("Set alarm[6] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[6], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_7:
 			set_alarm_area_config(7, writedata);
-			printf("Set alarm temperature[7] = %d\n",oseeing_config.alarm_temperature[7]);
+			//printf("Set alarm[7] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[7], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_8:
 			set_alarm_area_config(8, writedata);
-			printf("Set alarm temperature[8] = %d\n",oseeing_config.alarm_temperature[8]);
+			//printf("Set alarm[8] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[8], writedata, unit_str[oseeing_config.unit]);
 		break;
 		case REG_AREA_TEMPERATURE_9:
 			set_alarm_area_config(9, writedata);
-			printf("Set alarm temperature[9] = %d\n",oseeing_config.alarm_temperature[9]);
+			//printf("Set alarm[9] = %d(K), %d(%c), \n",oseeing_config.alarm_temperature[9], writedata, unit_str[oseeing_config.unit]);
 		break;	
 		case REG_MODBUS_ID:
 			set_rs485_id_config(&rx[5]);
 			printf("Set Modbus ID = 0x%x\n", oseeing_config.id);
+		break;
+		case REG_TEMPERATURE_UNIT:
+			set_temperature_unit_config(&rx[5]);
+			printf("Set Temperature Unit = 0x%x\n", oseeing_config.unit);
 		break;
 		default:
 		// Error code, {ID}{fun|0x80}{Error code}{CRC}
@@ -469,8 +605,10 @@ static int rx_data_parse(char *rx, ssize_t len) {
 	}
 	id = rx[0];
 	fun = rx[1];
-	if (id != oseeing_config.id)
+	if (id != oseeing_config.id) {
+		printf("ID not match %d:%d\n", id, oseeing_config.id);
 		return -1;
+	}
 	if (fun == 0x03) // read reg
 		read_modbus_regs(rx, len);
 	else if (fun == 0x06) { // write reg
@@ -498,14 +636,6 @@ int read_alarm_temperature() {
 
 uint16_t get_alarm_temperature(int idx) {
 	return oseeing_config.alarm_temperature[idx];
-}
-
-unsigned char get_modbus_id() {
-	unsigned char id;
-	if (file_exist(FILE_RS485_CUSTOM_ID) < 0)
-		return RS485_DEFAULT_ID;
-	read_char_from_file(RS485_DEFAULT_ID,&id);
-	return id;
 }
 
 unsigned char get_server_command() {

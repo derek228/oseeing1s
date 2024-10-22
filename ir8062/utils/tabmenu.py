@@ -58,7 +58,7 @@ def oseeing_tool_start(oseeing) :
     root = tk.Tk()
     root.title("Oseeing Tools")
     root.geometry('800x600')
-    parse_default_ini(oseeing)
+    #parse_default_ini(oseeing)
     print(oseeing.client.port)
     # 創建 Notebook（標籤頁容器）
     notebook = ttk.Notebook(root)

@@ -48,7 +48,38 @@ class ModbusConfig :
             temp = int((self.alarm[idx]-2735))
         return str(temp)
     
-    def get_temperature_unit(self, idx) :
+    def get_temperature_unit(self, idx, curr) :
+        if curr == self.unit :
+            temp = self.alarm[idx]
+            print("UNIT not changed...")
+        elif curr == 0 : # K
+            if self.unit == 1 : # K to F
+                temp = (int((self.alarm[idx]*9/5) - 4597))
+            elif self.unit == 2 : # K to C
+                temp = ((self.alarm[idx]-2735))
+            else :
+                print("Unknow New temperature unit")
+        elif curr == 1: #F        
+            if self.unit == 0 : # F to K, (t+4597)*5/9
+                temp = int(((self.alarm[idx]+4597)*5)/9)
+            elif self.unit == 2 : # F to C, (t-320)*5/9
+                temp = int((self.alarm[idx]-320)*5/9)
+            else :
+                print("Unknow New temperature unit")
+        elif curr == 2 : # C
+            if self.unit == 0 : # C to K
+                temp = ((self.alarm[idx])+2735)
+            elif self.unit == 1 : # C to F , t*9/5 + 320
+                temp = int((self.alarm[idx]*9/5)+320)
+            else :
+                print("Unknow New temperature unit")
+        else :
+            print("Unknow current temperature unit")
+        self.alarm[idx] = temp
+        print(f"{idx} : Unit({curr} == > {self.unit}) = {self.alarm[idx]}")
+        return temp
+
+        '''
         if self.unit == 0 :
             temp = self.alarm[idx]
         elif self.unit == 1 :
@@ -57,7 +88,7 @@ class ModbusConfig :
             temp = ((self.alarm[idx]-2735))
         print(f"{idx} ==> {type(temp)} : {temp}")
         return (temp)
-    
+        '''
     def transfer_temperature_unit_to_kelvin(self, val) :
             if self.unit == 0 :
                 temp=val
