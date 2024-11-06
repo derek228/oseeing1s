@@ -52,6 +52,8 @@ class ModbusConfig :
         if curr == self.unit :
             temp = self.alarm[idx]
             print("UNIT not changed...")
+        elif self.alarm[idx] == 0xFFFF :
+            temp = self.alarm[idx]
         elif curr == 0 : # K
             if self.unit == 1 : # K to F
                 temp = (int((self.alarm[idx]*9/5) - 4597))

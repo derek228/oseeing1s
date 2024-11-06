@@ -36,7 +36,6 @@ typedef struct {
 #define REG_AREA_TEMPERATURE_7	0x0017
 #define REG_AREA_TEMPERATURE_8	0x0018
 #define REG_AREA_TEMPERATURE_9	0x0019
-#define REG_MODBUS_ID			0x0020
 #define REG_TEMPERATURE_UNIT	0x0002
 
 
@@ -45,6 +44,14 @@ typedef struct {
 #define REG_AREA_ALARM_ALL          0x001B
 #define REG_ALARM_STATUS_ALL		0x0001
 
+// Modbus Write only Register, 0x06
+#define REG_MODBUS_ID			0x0020	// 1~0xF0
+#define REG_SENSOR_GAIN			0x0021	//reg[0xB9] 0,4: 1 (Max), 1:Auto, 2:0.25, 3:0.5
+#define REG_SENSOR_EMISSIVITY	0x0022	// reg[0xCA] 1~100
+#define REG_SENSOR_SENSITIVITY	0x0023	// reg[0xC2] 0~255
+#define REG_SENSOR_OFFSET		0x0024	// reg[0xCB] +/- 12.7K
+#define REG_SENSOR_FILTER		0x0025	// reg[0xD0~0xD3] TBD
+#define REG_REBOOT				0x002A
 // Vendor command list , {id}{CMD_}{Data Length}{Data}
 #define CMD_SET_SERVER_IP		0x02 // 0x50 // set server ip
 #define CMD_SET_STREAM_TRANSFER_STATUS	0x03 // 0x51 // 0 : stop transfer, 1: Start transfer
@@ -57,7 +64,7 @@ typedef struct {
     uint16_t alarm_temperature[10];
 }oseeing_config_t;
 
-void update_oseeing_config();
+//void update_oseeing_config();
 //int get_alarm_temperature();
 uint16_t get_alarm_temperature(int idx);
 

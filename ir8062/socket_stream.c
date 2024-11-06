@@ -25,7 +25,7 @@ static unsigned char get_server_connect() {
 	if (file_exist(FILE_SERVER_CONNECTION) < 0)
 		return 0;
 	read_char_from_file(FILE_SERVER_CONNECTION,&conn);
-	printf("Socket connect status = %d\n", conn);
+	//printf("Socket connect status = %d\n", conn);
 	return (uint8_t) conn;
 }
 

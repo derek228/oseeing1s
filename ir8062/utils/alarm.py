@@ -5,11 +5,13 @@ import struct
 import threading
 import modbus_config
 import time
+from tkinter import messagebox
 REG_AREA_TEMPERATURE_ALL    =   0x001A
 REG_AREA_ALARM_ALL          =   0x001B
 REG_ALARM_STATUS_ALL        =   0x0001
+REG_TEMPERATURE_UNIT    =   0x0002
 oseeing = None
-
+unit_str = ["°K", "°F", "°C"]
 
 def update_temperature(square_id, temperature):
     """
@@ -19,7 +21,7 @@ def update_temperature(square_id, temperature):
     """
     if square_id == 0:
         # 更新大正方形的溫度顯示
-        large_label.config(text=f"ID: 0\nTemp: {temperature}°C")
+        large_label.config(text=f"ID: 0\nTemp: {temperature/10}°C")
         large_frame.config(bg="yellow")  # 大正方形背景設為黃色
     elif square_id in squares:
         # 更新小正方形的溫度顯示
@@ -27,32 +29,38 @@ def update_temperature(square_id, temperature):
         squares[square_id].config(text=f"ID: {square_id}\nTemp: {temperature}°C", bg=color)
 
 def alarm_update(id, alm, temp) :
-    print(f"ID={id}, alarm={alm}, temperature={temp}")
+    #print(f"ID={id}, alarm={alm}, temperature={temp}")
     if id == 0 :
         if alm > 0 :
             color = "red"
         else :
             color = "yellow"
-        large_label.config(text=f"ID: 0\nTemp: {temp}°C")
+        large_label.config(text=f"ID: 0\nTemp: {temp}{unit_str[oseeing.unit]}")
         large_frame.config(bg=color)  # 大正方形背景設為黃色
     else :
         if alm > 0 :
             color = "red"  # 這裡設定了溫度背景顏色為紅色
         else :
             color = "white"
-        squares[id].config(text=f"ID: {id}\nTemp: {temp}°C", bg=color)
+        squares[id].config(text=f"ID: {id}\nTemp: {temp}{unit_str[oseeing.unit]}", bg=color)
 
 def read_modbus():
     global alarm_status
     global max_temperature
     while running :
+        reg = oseeing.read_reg(REG_TEMPERATURE_UNIT, 1)
+        if reg == None:
+            messagebox.showerror("Error", "Connection failure...(Unit)")
+            return
+        else :
+            oseeing.unit = reg[0]
         alarm_status = oseeing.read_reg(REG_ALARM_STATUS_ALL,1)
         max_temperature = oseeing.read_reg(REG_AREA_TEMPERATURE_ALL,10)
-        print(f"Alarm statux = {alarm_status}")
-        print(max_temperature)
-        alarm_update(0, alarm_status[0]&0x0001, max_temperature[0])
+        #print(f"Alarm statux = {alarm_status}")
+        #print(max_temperature)
+        alarm_update(0, alarm_status[0]&0x0001, max_temperature[0]/10)
         for i in range(1,10) :
-            alarm_update(i, alarm_status[0]&(1<<(i)), max_temperature[i])
+            alarm_update(i, alarm_status[0]&(1<<(i)), max_temperature[i]/10)
             #alarm_update(i+1, 0, max_temperature[i+1])
         time.sleep(1)
 

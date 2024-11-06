@@ -37,55 +37,55 @@ def update_config() :
     hex_value = square1_alarm_entry.get().strip()
     oseeing.alarm[1] = int(hex_value)
     #oseeing.alarm[1]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square1 alarm temperature={oseeing.alarm[1]}")
+    #print(f"Square1 alarm temperature={oseeing.alarm[1]}")
 
 # Square 2
     hex_value = square2_alarm_entry.get().strip()
     oseeing.alarm[2] = int(hex_value)
     #oseeing.alarm[2]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square2 alarm temperature={oseeing.alarm[2]}")
+    #print(f"Square2 alarm temperature={oseeing.alarm[2]}")
 
 # Square 3
     hex_value = square3_alarm_entry.get().strip()
     oseeing.alarm[3] = int(hex_value)
     #oseeing.alarm[3]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square3 alarm temperature={oseeing.alarm[3]}")
+    #print(f"Square3 alarm temperature={oseeing.alarm[3]}")
 
 # Square 4
     hex_value = square4_alarm_entry.get().strip()
     oseeing.alarm[4] = int(hex_value)
     #oseeing.alarm[4]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square4 alarm temperature={oseeing.alarm[4]}")
+    #print(f"Square4 alarm temperature={oseeing.alarm[4]}")
 
 # Square 5
     hex_value = square5_alarm_entry.get().strip()
     oseeing.alarm[5] = int(hex_value)
     #oseeing.alarm[5]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square5 alarm temperature={oseeing.alarm[5]}")
+    #print(f"Square5 alarm temperature={oseeing.alarm[5]}")
 
 # Square 6
     hex_value = square6_alarm_entry.get().strip()
     oseeing.alarm[6] = int(hex_value)
     #oseeing.alarm[6]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square6 alarm temperature={oseeing.alarm[6]}")
+    #print(f"Square6 alarm temperature={oseeing.alarm[6]}")
 
 # Square 7
     hex_value = square7_alarm_entry.get().strip()
     oseeing.alarm[7] = int(hex_value)
     #oseeing.alarm[7]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square7 alarm temperature={oseeing.alarm[7]}")
+    #print(f"Square7 alarm temperature={oseeing.alarm[7]}")
 
 # Square 8
     hex_value = square8_alarm_entry.get().strip()
     oseeing.alarm[8] = int(hex_value)
     #oseeing.alarm[8]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square8 alarm temperature={oseeing.alarm[8]}")
+    #print(f"Square8 alarm temperature={oseeing.alarm[8]}")
 
 # Square 9
     hex_value = square9_alarm_entry.get().strip()
     oseeing.alarm[9] = int(hex_value)
     #oseeing.alarm[9]=oseeing.transfer_temperature_unit_to_kelvin(int(hex_value))
-    print(f"Square9 alarm temperature={oseeing.alarm[9]}")
+    #print(f"Square9 alarm temperature={oseeing.alarm[9]}")
     '''
     for i in range(10) :
         temp = oseeing.get_temperature_unit_str(i)

@@ -26,13 +26,13 @@
 #include "rs485.h"
 #include "mi48.h"
 #include "utils.h"
-
+#include "mi48-i2c.h"
 /* Driver-specific ioctls: ...\linux-3.10.x\include\uapi\asm-generic\ioctls.h */
 #define TIOCGRS485      0x542E
 #define TIOCSRS485      0x542F
 //#define DEBUG_RS485
 oseeing_config_t oseeing_config={0};
-unsigned char server_cmd=0;
+static unsigned char server_cmd=0;
 pthread_t uart_tid;
 int serial_port;
 static unsigned char rs485_id = 0xAA;
@@ -230,7 +230,7 @@ void oseeing_config_init() {
 			printf("ERROR (%s) : Can't read Alarm temperature config, Disable all\n");
 			oseeing_alarm_default();
 		}
-#ifdef DEBUG_RS485		
+#if 1 // def DEBUG_RS485		
 		else {
 			printf("===== Alarm Setting =====\n");
 			for (i=0; i<10; i++) {
@@ -263,20 +263,26 @@ static int set_temperature_unit_config(unsigned char *unit) {
 }
 char unit_str[3]={'K','F','C'};
 
-static int set_alarm_area_config(int idx, short int temp) {
+static int set_alarm_area_config(int idx, uint16_t temp) {
 	read_alarm_temperature();
-	switch (oseeing_config.unit) {
-		case 1 : // F2K
-			oseeing_config.alarm_temperature[idx] = F2K(temp);
-		break;
-		case 2 : // C2K
-			oseeing_config.alarm_temperature[idx] = C2K(temp);
-		break;
-		default: // K
-			oseeing_config.alarm_temperature[idx]=temp;
-		break;
+	if (temp == 0xFFFF) {
+		oseeing_config.alarm_temperature[idx]=temp;
+		printf("Disable Alarm[%d]=0x%x\n", idx, oseeing_config.alarm_temperature[idx]);
 	}
-	printf("Set Alarm[%d] is %d(%c)=%d(K)\n",idx,temp,unit_str[oseeing_config.unit],oseeing_config.alarm_temperature[idx]);
+	else {
+		switch (oseeing_config.unit) {
+			case 1 : // F2K
+				oseeing_config.alarm_temperature[idx] = F2K(temp);
+			break;
+			case 2 : // C2K
+				oseeing_config.alarm_temperature[idx] = C2K(temp);
+			break;
+			default: // K
+				oseeing_config.alarm_temperature[idx]=temp;
+			break;	
+		}
+		printf("Set Alarm[%d] is %d(%c)=%d(K)\n",idx,temp,unit_str[oseeing_config.unit],oseeing_config.alarm_temperature[idx]);
+	}
 	return write_shortint_to_file(FILE_ALARM_TEMPERATURE, &oseeing_config.alarm_temperature[0], 10);
 }
 
@@ -374,6 +380,7 @@ static int read_modbus_regs(char *rx, ssize_t len) {
 				printf("send alarm data[%d]=0x%x, 0x%x\n",i, data[i*2],data[i*2+1]);
 				#endif
 			}
+			break;
 		case REG_FRAME_TEMPERATURE:
 			#if 1 
 			regdata = temperature_unit_conversion(temp[0].max);
@@ -523,6 +530,7 @@ static int read_modbus_regs(char *rx, ssize_t len) {
 static int write_modbus_regs(char *rx, ssize_t len){
 	uint16_t reg = (rx[2]<<8) | rx[3];
 	uint16_t writedata = (rx[4] << 8) | rx[5];;
+	int8_t offset=0;
 	char sendbuf[16] = {0};
 	switch (reg) {
 		case REG_FRAME_TEMPERATURE:
@@ -571,7 +579,28 @@ static int write_modbus_regs(char *rx, ssize_t len){
 		break;
 		case REG_TEMPERATURE_UNIT:
 			set_temperature_unit_config(&rx[5]);
-			printf("Set Temperature Unit = 0x%x\n", oseeing_config.unit);
+			printf("Set Temperature Unit = %d\n", oseeing_config.unit);
+		break;
+		case REG_SENSOR_GAIN ://reg[0xB9] 0,4: 1 (Max), 1:Auto, 2:0.25, 3:0.5
+			mi48_i2c_write(0xB9, rx[5]);
+			printf("Set MI48 Gain = 0x%d\n", rx[5]);
+		break;
+		case REG_SENSOR_EMISSIVITY : // reg[0xCA] 1~100
+			mi48_i2c_write(0xB9, rx[5]);
+			printf("Set MI48 Emissivity = %d\n", rx[5]);
+		break;
+		case REG_SENSOR_SENSITIVITY : // reg[0xCA] 1~100
+			mi48_i2c_write(0xC2, rx[5]);
+			printf("Set MI48 Sensitivity = %d\n", rx[5]);
+		break;
+		case REG_SENSOR_OFFSET : // reg[0xCB] 0~255 +/- 12.7K
+			offset = (int8_t)writedata;
+			mi48_i2c_write(0xCB, offset);
+			printf("Set MI48 Offset = %d (0x%x)\n", offset, offset);
+		break;
+		case REG_SENSOR_FILTER :
+			//mi48_i2c_write(0xD0 rx[5]);
+			printf("Set MI48 Filter...\n"); //  = 0x%x\n", rx[5]);
 		break;
 		default:
 		// Error code, {ID}{fun|0x80}{Error code}{CRC}

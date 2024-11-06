@@ -17,7 +17,7 @@
 #include "mi48.h"
 #include "rs485.h"
 #include "socket_stream.h"
-
+#include "mi48-i2c.h"
 #define NEW_THERMAL_SCAN 1
 
 
@@ -224,6 +224,34 @@ static int ir8062_hwinit()
 		tx[i] = 0;//i;
 		//printf("%x ", tx[i] );
 	}
+	#if 1
+	if (mi48_i2c_init()<0)
+		printf("ERROR: Can't open i2c-1 device\n");
+
+	mi48_i2c_write(0, 1);
+	usleep(100000);
+	mi48_i2c_write(0xb4, 0x03);
+	mi48_i2c_write(0xd0, 0x02);
+	mi48_i2c_write(0xd0, 0x03);
+	mi48_i2c_write(0xb1, 0x03);
+	unsigned char val=0;
+	mi48_i2c_read(0xb2, &val);
+	printf("reg(0x%x)=0x%x\n", 0xb2, val);
+	mi48_i2c_read(0xb3, &val);
+	printf("reg(0x%x)=0x%x\n", 0xb3, val);
+	mi48_i2c_read(0xe0, &val);
+	printf("reg(0x%x)=0x%x\n", 0xe0, val);
+	mi48_i2c_read(0xe1, &val);
+	printf("reg(0x%x)=0x%x\n", 0xe1, val);
+	mi48_i2c_read(0xe2, &val);
+	printf("reg(0x%x)=0x%x\n", 0xe2, val);
+	mi48_i2c_read(0xe3, &val);
+	printf("reg(0x%x)=0x%x\n", 0xe3, val);
+	mi48_i2c_read(0xe4, &val);
+	printf("reg(0x%x)=0x%x\n", 0xe4, val);
+	mi48_i2c_read(0xe5, &val);
+	printf("reg(0x%x)=0x%x\n", 0xe5, val);
+	#else
 	printf("Reset MI48 \n");
 	system("./i2cset -f -y 1 0x40 0 1");
 	printf("MI48 reset done\n");
@@ -240,6 +268,7 @@ static int ir8062_hwinit()
 	system("./i2cget -f -y 1 0x40 0xE3");
 	system("./i2cget -f -y 1 0x40 0xE4");
 	system("./i2cget -f -y 1 0x40 0xE5");
+	#endif
 	return ret;
 }
 
@@ -325,11 +354,10 @@ temperature_t *temperature_analysis() {
 			temperature[i].max = max; // (max-2735); //10;
 			temperature[i].min = min; // (min-2735); // /10;
 		}
-		temperature_alarm = 0;
 		if (temperature[i].max >= get_alarm_temperature(i)) {
 			temperature_alarm = (1<<i) | temperature_alarm;
 		}
-		printf("area[%d] x1(%d),y1(%d),x2(%d),y2(%d) : max=%d, min=%d\n", i, area[i-1].x1,area[i-1].y1,area[i-1].x2,area[i-1].y2,temperature[i].max,temperature[i].min);
+		printf("Alarm(%d) :area[%d] x1(%d),y1(%d),x2(%d),y2(%d) : max=%d, min=%d\n",get_alarm_temperature(i), i, area[i-1].x1,area[i-1].y1,area[i-1].x2,area[i-1].y2,temperature[i].max,temperature[i].min);
 	}
 	printf("Alarm = 0x%x\n", temperature_alarm);
 	return temperature;

@@ -6,9 +6,9 @@ import serial.tools.list_ports
 from tkinter import messagebox
 import time
 import tabmenu
-
-REG_AREA_TEMPERATURE_ALL    =   0x001A
-REG_TEMPERATURE_UNIT        =   0x0002
+import preview
+REG_AREA_ALARM_ALL      =   0x001B
+REG_TEMPERATURE_UNIT    =   0x0002
 def get_device_config():
     
     reg = oseeing.read_reg(REG_TEMPERATURE_UNIT, 1)
@@ -17,8 +17,8 @@ def get_device_config():
         return
     else :
         oseeing.unit = reg[0]
-    print(f"Temperature unit = {oseeing.unit}")
-    reg = oseeing.read_reg(REG_AREA_TEMPERATURE_ALL, 10)
+    #print(f"Temperature unit = {oseeing.unit}")
+    reg = oseeing.read_reg(REG_AREA_ALARM_ALL, 10)
     if reg == None:
         messagebox.showerror("Error", "Connection failure...(Alarm)")
         #root.destroy()  # 關閉主窗口
@@ -26,7 +26,7 @@ def get_device_config():
     else :
         for i in range(10) :
             oseeing.alarm[i] = reg[i]
-            print(f"Alarm{i} : {oseeing.alarm[i]}")
+            #print(f"Alarm{i} : {oseeing.alarm[i]}")
     return True
 
 def open_config():
@@ -73,6 +73,8 @@ id_entry.pack(side=tk.LEFT, padx=5)
 # 確認按鈕
 confirm_button = tk.Button(root, text="Connect", command=open_config)
 confirm_button.pack(pady=20)
+
+#print(f"Main : {root.winfo_x()} - {root.winfo_y()}")
 
 # 啟動主循環
 root.mainloop()
