@@ -16,4 +16,5 @@ $(TARGET) : $(OBJS)
 	$(CC) -o $(TARGET) $(OBJS) $(LDFLAGS) $(CFLAGS) $(LIBS) 
 clean:
 	rm -r *.o
+	rm $(TARGET)
 

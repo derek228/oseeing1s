@@ -1,8 +1,8 @@
 #! /bin/sh
 PROJECT_PATH=$PWD
-TARGET_PATH="/home/user/NUC970_Buildroot-master/board/oseeing/oseeing1s/"
+TARGET_PATH="/home/user/NUC970_Buildroot-master/board/oseeing/"
 echo "Project path = ${PROJECT_PATH}"
-cp $PROJECT_PATH/ir8062/oseeing1s $TARGET_PATH
-cp $PROJECT_PATH/leds/leds $TARGET_PATH
-
+#cp $PROJECT_PATH/ir8062/oseeing1s $TARGET_PATH
+#cp $PROJECT_PATH/leds/leds $TARGET_PATH
+cp -rf $PROJECT_PATH/oseeing-rootfs/oseeing1s $TARGET_PATH
 
