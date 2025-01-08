@@ -53,8 +53,8 @@ typedef struct {
 #define REG_SENSOR_FILTER		0x0025	// reg[0xD0~0xD3] TBD
 #define REG_REBOOT				0x002A
 // Vendor command list , {id}{CMD_}{Data Length}{Data}
-#define CMD_SET_SERVER_IP		0x02 // 0x50 // set server ip
-#define CMD_SET_STREAM_TRANSFER_STATUS	0x03 // 0x51 // 0 : stop transfer, 1: Start transfer
+//#define CMD_SET_SERVER_IP		0x02 // 0x50 // set server ip
+//#define CMD_SET_STREAM_TRANSFER_STATUS	0x03 // 0x51 // 0 : stop transfer, 1: Start transfer
 
 
 typedef struct {
@@ -64,10 +64,5 @@ typedef struct {
     uint16_t alarm_temperature[10];
 }oseeing_config_t;
 
-//void update_oseeing_config();
-//int get_alarm_temperature();
 uint16_t get_alarm_temperature(int idx);
-
-//void get_oseeing_config();
-
 #endif // RS485_H

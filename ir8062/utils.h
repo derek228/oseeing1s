@@ -12,6 +12,12 @@ KToCelsius:
 Celsius = (K-2735) / 10
 
 */
+// debug message
+#define logd(  dbg, x, y... ) do{ \
+    if(dbg == 1 )\
+    printf( x, ##y ); }while(0)
+
+
 #if 0
 #define C2K(c) {10*c+2735} // Celsius2K : K = 10*Celsius+2735
 #define F2K(f) {(50*f+22985)/9} // Fahrenheit2K : K = (50*Fahrenheit + 22985)/9

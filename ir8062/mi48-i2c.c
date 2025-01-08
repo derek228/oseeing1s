@@ -24,30 +24,27 @@ struct i2c_msg
 struct i2c_rdwr_ioctl_data
 {
 	struct i2c_msg *msgs;
-	int nmsgs;
-	/* nmsgs這個數量决定了有多少開始信號，對於“單開始時序”，取1*/
+	int nmsgs; 
 };
 int i2c_fd=-1;
 int mi48_i2c_read(unsigned char reg, unsigned char *val) {
     struct i2c_rdwr_ioctl_data mi48_data;
     if (i2c_fd < 0) 
         return -1;
-		/******read data from e2prom******/
+	/******read data from mi48******/
 	mi48_data.nmsgs=2;
    	mi48_data.msgs=(struct i2c_msg*)malloc(mi48_data.nmsgs*sizeof(struct i2c_msg));
     mi48_data.msgs[0].buf = (unsigned char*)malloc(1);    
     mi48_data.msgs[1].buf = (unsigned char*)malloc(1);    
-	(mi48_data.msgs[0]).len=1; //mi48 寫入1個目標的地址
-	(mi48_data.msgs[0]).addr=MI48_ADDR; // mi48 設備地址
-	(mi48_data.msgs[0]).flags=0;//write
-	(mi48_data.msgs[0]).buf[0]=reg; //mi48 reg
+	(mi48_data.msgs[0]).len=1; // write length
+	(mi48_data.msgs[0]).addr=MI48_ADDR; // mi48 slave address
+	(mi48_data.msgs[0]).flags=0; // 0:write 
+	(mi48_data.msgs[0]).buf[0]=reg; //register
 	
-	(mi48_data.msgs[1]).len=1;//讀出1個數據
-	(mi48_data.msgs[1]).addr=MI48_ADDR;// mi48 設備地址
-	(mi48_data.msgs[1]).flags=I2C_M_RD;//read
-	(mi48_data.msgs[1]).buf[0]=0;//初始化讀緩沖
-	//		(mi48_data.msgs[1]).buf[1]=0;//初始化讀緩沖
-	//		(mi48_data.msgs[1]).buf[2]=0;//初始化讀緩沖
+	(mi48_data.msgs[1]).len=1;//read length
+	(mi48_data.msgs[1]).addr=MI48_ADDR;// mi48 slave address
+	(mi48_data.msgs[1]).flags=I2C_M_RD; //read
+	(mi48_data.msgs[1]).buf[0]=0; // buf clear
 
 	if(ioctl(i2c_fd,I2C_RDWR,(unsigned long)&mi48_data) <0)
 	{
@@ -70,10 +67,6 @@ int mi48_i2c_write(unsigned char reg, unsigned char val) {
     if (i2c_fd < 0) 
         return -1;
 	mi48_data.nmsgs=1;
-	/*
-	 *因为操作時序中，最多是用到2個開始信號（字節讀操作中），所以此將
-	 *mi48_data.nmsgs配置为2
-	 */
 	mi48_data.msgs=(struct i2c_msg*)malloc(mi48_data.nmsgs*sizeof(struct i2c_msg));
 	if(!mi48_data.msgs)
 	{
@@ -81,16 +74,12 @@ int mi48_i2c_write(unsigned char reg, unsigned char val) {
 		return -1;
 	}
     mi48_data.msgs[0].buf = (unsigned char*)malloc(2);
-    // check malloc error
-	//                ioctl(fd,I2C_TIMEOUT,1);/*超時時間*/
-	//               ioctl(fd,I2C_RETRIES,2);/*重复次數*/
-	//
-	mi48_data.nmsgs=1;	      			// 從Start到Stop，中間沒有repeat start的話，算一組的I2C data
-	(mi48_data.msgs[0]).len=2; 			// i2c寫入兩筆數據
-	(mi48_data.msgs[0]).addr=MI48_ADDR;		//設備地址
+	mi48_data.nmsgs=1;	      			 
+	(mi48_data.msgs[0]).len=2; 			// write length, reg+buf
+	(mi48_data.msgs[0]).addr=MI48_ADDR;		// MI48 slave address
 	(mi48_data.msgs[0]).flags=0; 		//write:0 read:I2C_M_RD
-	(mi48_data.msgs[0]).buf[0]=reg;		// 寫入thermal設備地址的Register ex: B4 register
-	(mi48_data.msgs[0]).buf[1]=val;		// 寫入這個Register的數值        ex:0xB4 register 填入 0xB3
+	(mi48_data.msgs[0]).buf[0]=reg;		// register
+	(mi48_data.msgs[0]).buf[1]=val;		// value
 	
 	if(ioctl(i2c_fd, I2C_RDWR, (unsigned long)&mi48_data)<0)
 	{

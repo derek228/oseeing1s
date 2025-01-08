@@ -5,13 +5,13 @@
 #include <time.h>
 #include <stdint.h>
 #include "spidev.h"
-#include "ini-parse.h"
+//#include "ini-parse.h"
 #include "../leds/pwm_message.h"
 #include "led_control.h"
 #include "ethernet.h"
 #include "mi48.h"
 
-#define FW_VERSION	"Oseeing1S_V1.00.01"
+#define FW_VERSION	"Oseeing1S_V1.00.02"
 static void parse_opts(int argc, char *argv[])
 {
 	char *macno;
@@ -42,19 +42,6 @@ static int factory_test() {
 	}
 }
 static void monitor_temperature() {
-	// INI file configuartion parse.
-	/*/
-	while (rs485_init()<0) {
-		printf("ERROR : Can't open RS485 port\n");
-		sleep(1);
-	}
-	// Check dhcp if support ethernet
-	eth_mac_config();
-	while (ethernet_init() < 0) {
-		printf("ERROR : DHCP IP address not found\n");
-		sleep(1);
-	}
-	*/
 	// start system LEDs control
 	led_msg_init();
 	printf("Post MAC address = %s\n", eth_get_mac());
@@ -67,8 +54,6 @@ static void monitor_temperature() {
 	}
 }
 int main(int argc, char *argv[]) {
-	//pthread_t tid_sensor;
-	// Show Oseeing firmware version
 	printf("FW Version : %s\n", FW_VERSION);
 	parse_opts(argc, argv);
 

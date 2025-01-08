@@ -10,7 +10,7 @@
 
 #include "utils.h"
 
-// Modbus RTU CRC 计算函数
+// Modbus RTU CRC 
 uint16_t calculate_modbus_crc(uint8_t *data, uint16_t length) {
     uint16_t crc = 0xFFFF;
     uint16_t pos,i;
@@ -28,19 +28,19 @@ uint16_t calculate_modbus_crc(uint8_t *data, uint16_t length) {
     return crc;
 }
 
-// 检查 CRC 是否正确
+// Check modbus RTU CRC
 int check_modbus_crc(uint8_t *received_data, uint16_t length) {
-    // 获取数据的 CRC（最后两个字节）
+    // Get CRC (last two bytes)
     uint16_t received_crc = (received_data[length - 1] << 8) | received_data[length - 2];
     
-    // 计算数据的 CRC
+    // calculate CRC
     uint16_t calculated_crc = calculate_modbus_crc(received_data, length - 2);
     printf("recv CRC = 0x%x, cal CRC = 0x%x\n",received_crc, calculated_crc);
-    // 比较接收到的 CRC 和计算的 CRC 是否一致
+    // Compare CRC
     if (calculated_crc == received_crc) {
-        return 1; // CRC 正确
+        return 1; // CRC pass
     } else {
-        return 0; // CRC 错误
+        return 0; // CRC failure
     }
 }
 

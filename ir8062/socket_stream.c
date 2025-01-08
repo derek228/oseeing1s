@@ -62,8 +62,8 @@ static int is_socket_connection() {
 		printf("Socket disconnect, try to init...\n");
 		server_addr.sin_family = AF_INET;
 		server_addr.sin_port = htons(SERVER_PORT);
-    // 将 IP 地址转换为二进制格式并存储在 server_addr 结构中
-//		if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
+    	// set ip address
+		// if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
 		if (inet_pton(AF_INET, ipaddr, &server_addr.sin_addr) <= 0) {
 			perror("Invalid address/ Address not supported");
 			return -1;
@@ -75,7 +75,7 @@ static int is_socket_connection() {
 	    }
 	}
 	if (socket_connected < 0) {
-	    // 连接到接收端
+	    // Connect to server
 		printf("Connect to Socket... \n");
 		socket_connected=connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
    		if (socket_connected < 0) {

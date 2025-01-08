@@ -42,21 +42,9 @@ static int str2hex(char *str, unsigned char **cmd) {
 		cmd_len++;
 		if (token[0]==0x20) 
 			token=token+1;
-#if 0
-	char *endptr;
-	hex_value = strtol(token, &endptr, 16);
-	if (*endptr != '\0') {
-		printf("Invalid input: %s\n", token);
-		return 1;
-	}
-	dio_cmd[cmd_len-1] = (unsigned int)hex_value;
-	printf("%x ", dio_cmd[cmd_len-1]);
-
-#else
 		sscanf(token, "0x%x", &hex_value); // &dio_cmd[cmd_len-1]);
         	dio_cmd[cmd_len-1] = (unsigned int)hex_value;
 		printf("%x ", dio_cmd[cmd_len-1]);
-#endif
 		token = strtok(NULL, delimiter);
 	}
 

@@ -13,23 +13,30 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include "spidev.h"
-#include "ini-parse.h"
+//#include "ini-parse.h"
 #include "mi48.h"
 #include "rs485.h"
 #include "socket_stream.h"
 #include "mi48-i2c.h"
+#include "utils.h"
 #define NEW_THERMAL_SCAN 1
 
 
 #define FILE_RS485_CUSTOM_ID	"/mnt/mtdblock1/oseeing1s-config/id" 
-// socket server ip
-#define FILE_SERVER_IP	"/ip" 
+// socket server ip file
+#define FILE_SERVER_IP	"/ip" // This file will store the ip address of socket server 
 // set 1, start connect to socket server
-#define FILE_SERVER_CONNECTION	"/connect" 
-// bit 7 = 0 , full frame mode, =1 9 square mode,
-// bit 6:0 , full frame alarm temperature
+#define FILE_SERVER_CONNECTION	"/connect" // This file will store the connect status 
+/*	
+	only for rs232 use
+	bit 7 = 0 , full frame mode, =1 9 square mode,
+	bit 6:0 , full frame alarm temperature
+*/
 #define FILE_DEVICE_MODE	"/mnt/mtdblock1/oseeing1s-config/mode" 
-// bit 7 = 1, enable alarm, bit 6:0 , alarm temperature
+/*	
+	only for rs232 use
+	bit 7 = 1, enable alarm, bit 6:0 , alarm temperature
+*/
 #define FILE_SQUARE1_ALARM	"/mnt/mtdblock1/oseeing1s-config/square1"
 #define FILE_SQUARE2_ALARM	"/mnt/mtdblock1/oseeing1s-config/square2"
 #define FILE_SQUARE3_ALARM	"/mnt/mtdblock1/oseeing1s-config/square3"
@@ -39,10 +46,6 @@
 #define FILE_SQUARE7_ALARM	"/mnt/mtdblock1/oseeing1s-config/square7"
 #define FILE_SQUARE8_ALARM	"/mnt/mtdblock1/oseeing1s-config/square8"
 #define FILE_SQUARE9_ALARM	"/mnt/mtdblock1/oseeing1s-config/square9"
-
-//int sockfd=-1;
-
-
 
 // Thermal sensor hardware signal setting
 #define CAP_SIG_ID          0x0a 
@@ -73,20 +76,22 @@ static unsigned short temp_kelvin[62][80]={0};
 
 temperature_t temperature[10] = {0};
 uint16_t temperature_alarm=0;
-coordinate_t area[9]= { { 1, 1,26,20},
-						{27, 1,52,20},
-						{53, 1,78,20},
-						{ 1,21,26,40},
-						{27,21,52,40},
-						{53,21,78,40},
-						{ 1,41,26,60},
-						{27,41,52,60},
-						{53,41,78,60}
+// thermal square area {x1,y1,x2,y2}
+coordinate_t area[9]= { { 1, 1,26,20},	// square 1
+						{27, 1,52,20},	// square 2
+						{53, 1,78,20},	// square 3
+						{ 1,21,26,40},	// square 4
+						{27,21,52,40},	// square 5
+						{53,21,78,40},	// square 6
+						{ 1,41,26,60},	// square 7
+						{27,41,52,60},	// square 8
+						{53,41,78,60}	// square 9
 };
 
 //static char mi48_header_raw[160]={0};
 static mi48_header_t mi48_header;
 static int mi48_debug=0;
+// debug log enable, is /mnt/mtdblock1/mi48 file exist, print debug log
 static void mi48_log_print() {
 	const char *filename = "/mnt/mtdblock1/mi48";
 	if (access(filename, F_OK) != -1) {
@@ -102,7 +107,6 @@ void sig_event_handler(int sig_id, siginfo_t *sig_info, void *unused)
 		state_change = 1;
 	}
 }
-
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 static void pabort(const char *s)
@@ -141,6 +145,7 @@ static void transfer(int fd, uint8_t const *tx, uint8_t const *rx, size_t len)
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 }
 
+// print free memory space. 
 static int memory_print() {
     unsigned long long free_memory;
     FILE *fp = fopen("/proc/meminfo", "r");
@@ -224,7 +229,7 @@ static int ir8062_hwinit()
 		tx[i] = 0;//i;
 		//printf("%x ", tx[i] );
 	}
-	#if 1
+	#if 1 // use mi48-i2c function to access mi48 
 	if (mi48_i2c_init()<0)
 		printf("ERROR: Can't open i2c-1 device\n");
 
@@ -251,7 +256,7 @@ static int ir8062_hwinit()
 	printf("reg(0x%x)=0x%x\n", 0xe4, val);
 	mi48_i2c_read(0xe5, &val);
 	printf("reg(0x%x)=0x%x\n", 0xe5, val);
-	#else
+	#else // use i2cset/i2cget to r/w mi48
 	printf("Reset MI48 \n");
 	system("./i2cset -f -y 1 0x40 0 1");
 	printf("MI48 reset done\n");
@@ -278,7 +283,7 @@ static void mi48_header_parse(uint8_t *mi48_header_raw)
 	mi48_header.max = (mi48_header_raw[10]<<8) | mi48_header_raw[11];
 	mi48_header.min = (mi48_header_raw[12]<<8) | mi48_header_raw[13];
 	logd(mi48_debug,"frame count = %d, max=%d, min=%d\n",mi48_header.frame_cnt,mi48_header.max,mi48_header.min);
-/*
+#if 0 // mi48 header debug message
 	switch (index) {
 		case 0: // Frame count
 		case 1:
@@ -298,25 +303,9 @@ static void mi48_header_parse(uint8_t *mi48_header_raw)
 		default :
 			break;
 	}
-*/
+#endif
 }
-/*
-int oseeing_config_update() {
-	unsigned char data, alarm, temp,i;
-	for (i=0;i<10;i++) {
-		data = get_square_alarm(i);
-		if (data < 0) {
-			printf("Can't get square(%x) data=%x\n", i,data);
-			data = 0;
-		}
-		oseeing_config[i].alarm = ( data & 0x80 ) >> 7;
-		oseeing_config[i].temperature = data & 0x7f ;
-		printf("id(%d) : alarm = %d, temp = %d\n", i, oseeing_config[i].alarm,oseeing_config[i].temperature);
-	}
-	return 0;
-}
-*/
-
+// transfer raw data to kelvin temperature unit
 void mi48_raw_to_kelvin() {
 	int i,j;
     for (i = 0; i < 62; i++) {
@@ -334,7 +323,7 @@ temperature_t *temperature_analysis() {
 	mi48_raw_to_kelvin();
 	temperature[0].max = mi48_header.max; // (mi48_header.max-2735) / 10;
 	temperature[0].min = mi48_header.min; // (mi48_header.min-2735) / 10;
-	printf("Frame max temperature = %d, min temperature = %d\n", temperature[0].max,temperature[0].min);
+	//printf("Frame max temperature = %d, min temperature = %d\n", temperature[0].max,temperature[0].min);
 	temperature_alarm = 0;
 	if (temperature[0].max >= get_alarm_temperature(0)) {
 		temperature_alarm |= 1; //  | temperature_alarm;
@@ -357,9 +346,9 @@ temperature_t *temperature_analysis() {
 		if (temperature[i].max >= get_alarm_temperature(i)) {
 			temperature_alarm = (1<<i) | temperature_alarm;
 		}
-		printf("Alarm(%d) :area[%d] x1(%d),y1(%d),x2(%d),y2(%d) : max=%d, min=%d\n",get_alarm_temperature(i), i, area[i-1].x1,area[i-1].y1,area[i-1].x2,area[i-1].y2,temperature[i].max,temperature[i].min);
+		//printf("Alarm(%d) :area[%d] x1(%d),y1(%d),x2(%d),y2(%d) : max=%d, min=%d\n",get_alarm_temperature(i), i, area[i-1].x1,area[i-1].y1,area[i-1].x2,area[i-1].y2,temperature[i].max,temperature[i].min);
 	}
-	printf("Alarm = 0x%x\n", temperature_alarm);
+	//printf("Alarm = 0x%x\n", temperature_alarm);
 	return temperature;
 }
 
@@ -386,20 +375,12 @@ int mi48_scan() {
 			transfer(fd_spi,tx,rx,size);
 			memcpy(&mi48_data[spi_count*160],rx,size);
 		}
-// Try to send mi48_data to socket
+		// Try to send mi48_data to socket
 		socket_transfer(mi48_data);
-		// socket end
-
-// Check modbus server request 
-/*
-		cmd = get_server_command();
-		if (cmd)
-			temperature_analysis(cmd);
-			*/
 	}
-
 	return 0; // fail, spi not ready
 }
+
 unsigned int mi48_get_max_temperature() {
 	return mi48_header.max;
 }
@@ -411,6 +392,7 @@ unsigned int mi48_get_min_temperature() {
 uint8_t *mi48_get_data() {
 	return mi48_data;
 }
+
 int mi48_close()
 {
 	free(rx);
@@ -419,6 +401,7 @@ int mi48_close()
 	close(fd_capture);
 	return 0;	
 }
+
 int socket_close() {
 
 }

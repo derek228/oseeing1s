@@ -21,7 +21,7 @@
 #include 	<signal.h>
 #include    <pthread.h>
 #include <linux/serial.h>
-#include "ini-parse.h"
+//#include "ini-parse.h"
 #include "rs485.h"
 #define RS485_DEV "/dev/ttyS4" // uart port
 #define RS232_BAUDRATE 115200
@@ -689,7 +689,7 @@ void *uart_thread(void *arg) {
 
     return;
 }
-void curl_thread_destory() {
+void uart_thread_destory() {
     pthread_cancel(uart_tid);
     pthread_join(uart_tid, NULL);  
 }	
